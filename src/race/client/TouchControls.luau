@@ -3,15 +3,20 @@
 -- Кнопки ловят касания сами (InputBegan/InputEnded), поэтому несколько пальцев работают вместе.
 
 local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local Input = require(script.Parent.Input)
 
 local BUTTON = 104 -- размер большой кнопки, px
 local MARGIN = 22
-local IDLE = Color3.fromRGB(25, 30, 44)
-local PRESSED = Color3.fromRGB(255, 200, 40)
-local ON = Color3.fromRGB(60, 200, 110)
+local GLASS = Color3.fromRGB(18, 22, 34) -- темное «стекло» кнопки
+local GLASS_TOP = Color3.fromRGB(44, 52, 76)
+local RIM = Color3.fromRGB(190, 205, 255) -- тонкая светлая обводка
+local ACCENT = Color3.fromRGB(0, 224, 255) -- подсветка нажатой кнопки
+local ACCENT_BRAKE = Color3.fromRGB(255, 82, 96)
+local ACCENT_ON = Color3.fromRGB(70, 230, 140)
+local PRESS_TWEEN = TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
 local TouchControls = {}
 
@@ -23,40 +28,112 @@ local function isPress(input: InputObject): boolean
 	return input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1
 end
 
-local function makeButton(parent: Instance, text: string, size: number, position: UDim2, anchor: Vector2): TextButton
+type Look = {
+	button: TextButton,
+	body: Frame,
+	scale: UIScale,
+	stroke: UIStroke,
+	icon: TextLabel,
+	accent: Color3,
+}
+
+-- Кнопка-«стекло»: полупрозрачная заливка с градиентом, тонкая обводка, иконка и маленькая подпись.
+local function makeButton(
+	parent: Instance,
+	icon: string,
+	caption: string,
+	size: Vector2,
+	position: UDim2,
+	anchor: Vector2,
+	accent: Color3
+): Look
 	local button = Instance.new("TextButton")
-	button.Size = UDim2.fromOffset(size, size)
+	button.Size = UDim2.fromOffset(size.X, size.Y)
 	button.Position = position
 	button.AnchorPoint = anchor
-	button.BackgroundColor3 = IDLE
-	button.BackgroundTransparency = 0.35
+	button.BackgroundTransparency = 1
 	button.AutoButtonColor = false
-	button.Text = text
-	button.TextColor3 = Color3.new(1, 1, 1)
-	button.TextSize = if size >= BUTTON then 30 else 18
-	button.Font = Enum.Font.GothamBold
+	button.Text = ""
 	button.Parent = parent
+
+	local body = Instance.new("Frame")
+	body.Size = UDim2.fromScale(1, 1)
+	body.AnchorPoint = Vector2.new(0.5, 0.5)
+	body.Position = UDim2.fromScale(0.5, 0.5)
+	body.BackgroundColor3 = Color3.new(1, 1, 1)
+	body.BackgroundTransparency = 0.25
+	body.Active = false
+	body.Parent = button
+
 	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0.25, 0)
-	corner.Parent = button
-	return button
+	corner.CornerRadius = UDim.new(0, 22)
+	corner.Parent = body
+
+	local gradient = Instance.new("UIGradient")
+	gradient.Color = ColorSequence.new(GLASS_TOP, GLASS)
+	gradient.Rotation = 90
+	gradient.Parent = body
+
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = RIM
+	stroke.Transparency = 0.55
+	stroke.Thickness = 1.5
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Parent = body
+
+	local scale = Instance.new("UIScale")
+	scale.Parent = body
+
+	local big = size.Y >= 90
+	local iconLabel = Instance.new("TextLabel")
+	iconLabel.Size = UDim2.fromScale(1, if caption == "" then 1 else 0.62)
+	iconLabel.Position = UDim2.fromScale(0, if caption == "" then 0 else 0.08)
+	iconLabel.BackgroundTransparency = 1
+	iconLabel.Text = icon
+	iconLabel.TextColor3 = Color3.new(1, 1, 1)
+	iconLabel.TextTransparency = 0.05
+	iconLabel.Font = Enum.Font.GothamBold
+	iconLabel.TextSize = if big then 38 elseif (utf8.len(icon) or 1) > 2 then 13 else 22
+	iconLabel.Parent = body
+
+	if caption ~= "" then
+		local captionLabel = Instance.new("TextLabel")
+		captionLabel.Size = UDim2.fromScale(1, 0.26)
+		captionLabel.Position = UDim2.fromScale(0, 0.68)
+		captionLabel.BackgroundTransparency = 1
+		captionLabel.Text = caption
+		captionLabel.TextColor3 = RIM
+		captionLabel.TextTransparency = 0.15
+		captionLabel.Font = Enum.Font.GothamMedium
+		captionLabel.TextSize = if big then 14 else 11
+		captionLabel.Parent = body
+	end
+
+	return { button = button, body = body, scale = scale, stroke = stroke, icon = iconLabel, accent = accent }
 end
 
-local function bindHold(button: TextButton, onChange: (boolean) -> ())
+local function setPressed(look: Look, pressed: boolean)
+	TweenService:Create(look.scale, PRESS_TWEEN, { Scale = if pressed then 0.92 else 1 }):Play()
+	TweenService
+		:Create(look.body, PRESS_TWEEN, { BackgroundColor3 = if pressed then look.accent else Color3.new(1, 1, 1) })
+		:Play()
+	TweenService:Create(look.body, PRESS_TWEEN, { BackgroundTransparency = if pressed then 0.35 else 0.25 }):Play()
+	TweenService:Create(look.stroke, PRESS_TWEEN, { Transparency = if pressed then 0 else 0.55 }):Play()
+end
+
+local function bindHold(look: Look, onChange: (boolean) -> ())
 	local active: InputObject? = nil
-	button.InputBegan:Connect(function(input: InputObject)
+	look.button.InputBegan:Connect(function(input: InputObject)
 		if isPress(input) and not active then
 			active = input
-			button.BackgroundColor3 = PRESSED
-			button.BackgroundTransparency = 0.1
+			setPressed(look, true)
 			onChange(true)
 		end
 	end)
 	UserInputService.InputEnded:Connect(function(input: InputObject)
 		if input == active then
 			active = nil
-			button.BackgroundColor3 = IDLE
-			button.BackgroundTransparency = 0.35
+			setPressed(look, false)
 			onChange(false)
 		end
 	end)
@@ -89,20 +166,51 @@ function TouchControls.start()
 	gui.DisplayOrder = 5
 	gui.Parent = (Players.LocalPlayer :: Player):WaitForChild("PlayerGui")
 
-	local left = makeButton(gui, "◀", BUTTON, UDim2.new(0, MARGIN, 1, -MARGIN), Vector2.new(0, 1))
-	local right = makeButton(gui, "▶", BUTTON, UDim2.new(0, MARGIN * 2 + BUTTON, 1, -MARGIN), Vector2.new(0, 1))
-	local brake =
-		makeButton(gui, "Тормоз", BUTTON, UDim2.new(1, -MARGIN * 2 - BUTTON, 1, -MARGIN), Vector2.new(1, 1))
-	local gas = makeButton(gui, "Газ", BUTTON, UDim2.new(1, -MARGIN, 1, -MARGIN), Vector2.new(1, 1))
-	gas.Size = UDim2.fromOffset(BUTTON, BUTTON * 1.6)
+	local square = Vector2.new(BUTTON, BUTTON)
+	local bottomLeft, bottomRight = Vector2.new(0, 1), Vector2.new(1, 1)
+	local left = makeButton(gui, "◀", "", square, UDim2.new(0, MARGIN, 1, -MARGIN), bottomLeft, ACCENT)
+	local right = makeButton(gui, "▶", "", square, UDim2.new(0, MARGIN * 2 + BUTTON, 1, -MARGIN), bottomLeft, ACCENT)
+	local brake = makeButton(
+		gui,
+		"■",
+		"ТОРМОЗ",
+		square,
+		UDim2.new(1, -MARGIN * 2 - BUTTON, 1, -MARGIN),
+		bottomRight,
+		ACCENT_BRAKE
+	)
+	local gas = makeButton(
+		gui,
+		"▲",
+		"ГАЗ",
+		Vector2.new(BUTTON, BUTTON * 1.6),
+		UDim2.new(1, -MARGIN, 1, -MARGIN),
+		bottomRight,
+		ACCENT
+	)
 	-- Вместо газа при автогазе: наклон носа в воздухе вперед и назад.
-	local noseDown = makeButton(gui, "▼\nвперёд", BUTTON, UDim2.new(1, -MARGIN, 1, -MARGIN), Vector2.new(1, 1))
-	local noseUp =
-		makeButton(gui, "▲\nназад", BUTTON, UDim2.new(1, -MARGIN, 1, -MARGIN * 2 - BUTTON), Vector2.new(1, 1))
-	noseDown.TextSize = 22
-	noseUp.TextSize = 22
-	local respawn = makeButton(gui, "R", 56, UDim2.new(1, -MARGIN, 0, 20), Vector2.new(1, 0))
-	local autoGas = makeButton(gui, "", 56, UDim2.new(1, -MARGIN * 2 - 56, 0, 20), Vector2.new(1, 0))
+	local noseDown =
+		makeButton(gui, "↓", "ВПЕРЁД", square, UDim2.new(1, -MARGIN, 1, -MARGIN), bottomRight, ACCENT)
+	local noseUp = makeButton(
+		gui,
+		"↑",
+		"НАЗАД",
+		square,
+		UDim2.new(1, -MARGIN, 1, -MARGIN * 2 - BUTTON),
+		bottomRight,
+		ACCENT
+	)
+	local respawn =
+		makeButton(gui, "⟲", "", Vector2.new(56, 56), UDim2.new(1, -MARGIN, 0, 20), Vector2.new(1, 0), ACCENT)
+	local autoGas = makeButton(
+		gui,
+		"АВТО-ГАЗ",
+		"",
+		Vector2.new(104, 56),
+		UDim2.new(1, -MARGIN * 2 - 56, 0, 20),
+		Vector2.new(1, 0),
+		ACCENT_ON
+	)
 
 	bindHold(left, function(down)
 		Input.setHeld("left", down)
@@ -123,33 +231,36 @@ function TouchControls.start()
 		Input.setHeld("noseUp", down)
 	end)
 
-	respawn.Text = "Респ."
-	respawn.Activated:Connect(Input.respawn)
+	bindHold(respawn, function(down)
+		if down then
+			Input.respawn()
+		end
+	end)
 
 	-- На телефоне без клавиатуры газ жмется сам: новичку надо только рулить и тормозить.
 	local enabled = isTouchOnly()
+	local function place(look: Look, anchor: Vector2, position: UDim2)
+		look.button.AnchorPoint = anchor
+		look.button.Position = position
+	end
 	local function showAutoGas()
-		autoGas.Text = if enabled then "Авто\nгаз ✓" else "Авто\nгаз"
-		autoGas.BackgroundColor3 = if enabled then ON else IDLE
+		-- Включенный автогаз подсвечен зеленой обводкой и зеленым текстом.
+		autoGas.stroke.Color = if enabled then ACCENT_ON else RIM
+		autoGas.stroke.Transparency = if enabled then 0.05 else 0.55
+		autoGas.icon.TextColor3 = if enabled then ACCENT_ON else Color3.new(1, 1, 1)
 		Input.setAutoGas(enabled)
-		gas.Visible = not enabled
-		-- Автогаз: ▲▼ стоят вместо газа справа. Ручной газ: они над ◀ ▶ слева.
-		noseDown.Visible = true
-		noseUp.Visible = true
+		gas.button.Visible = not enabled
+		-- Автогаз: ↑↓ стоят вместо газа справа. Ручной газ: они над ◀ ▶ слева.
 		if enabled then
-			noseDown.AnchorPoint = Vector2.new(1, 1)
-			noseDown.Position = UDim2.new(1, -MARGIN, 1, -MARGIN)
-			noseUp.AnchorPoint = Vector2.new(1, 1)
-			noseUp.Position = UDim2.new(1, -MARGIN, 1, -MARGIN * 2 - BUTTON)
+			place(noseDown, bottomRight, UDim2.new(1, -MARGIN, 1, -MARGIN))
+			place(noseUp, bottomRight, UDim2.new(1, -MARGIN, 1, -MARGIN * 2 - BUTTON))
 		else
-			noseUp.AnchorPoint = Vector2.new(0, 1)
-			noseUp.Position = UDim2.new(0, MARGIN, 1, -MARGIN * 2 - BUTTON)
-			noseDown.AnchorPoint = Vector2.new(0, 1)
-			noseDown.Position = UDim2.new(0, MARGIN * 2 + BUTTON, 1, -MARGIN * 2 - BUTTON)
+			place(noseUp, bottomLeft, UDim2.new(0, MARGIN, 1, -MARGIN * 2 - BUTTON))
+			place(noseDown, bottomLeft, UDim2.new(0, MARGIN * 2 + BUTTON, 1, -MARGIN * 2 - BUTTON))
 		end
 	end
 	showAutoGas()
-	autoGas.Activated:Connect(function()
+	autoGas.button.Activated:Connect(function()
 		enabled = not enabled
 		showAutoGas()
 	end)

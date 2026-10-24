@@ -50,7 +50,7 @@ function Hud.create()
 	hintLabel.Text =
 		"WASD или стрелки: газ и руль · в воздухе: наклон и крен · R: респаун"
 	if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
-		hintLabel.Text = "◀ ▶ руль · Тормоз · в воздухе: ▲ ▼ наклоняют нос"
+		hintLabel.Text = "◀ ▶ руль · Тормоз · в воздухе: ↑ ↓ наклоняют нос"
 	end
 
 	resultsLabel = label("Results", UDim2.fromOffset(420, 360), UDim2.fromScale(0.5, 0.55), Vector2.new(0.5, 0.5), 24)
