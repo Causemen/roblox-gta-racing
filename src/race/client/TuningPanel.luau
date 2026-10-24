@@ -24,6 +24,7 @@ local PARAMS: { { key: string, label: string, min: number?, max: number? } } = {
 	{ key = "FullSteerSpeed", label = "Скорость полного руля" },
 	{ key = "YawResponse", label = "Отклик поворота" },
 	{ key = "LateralGrip", label = "Боковое сцепление" },
+	{ key = "RoadGuide", label = "Доворот вдоль дороги в петле" },
 	{ key = "DampingRatio", label = "Демпфирование подвески" },
 	{ key = "GravityBlend", label = "Прилипание к трассе" },
 	{ key = "AirPitchRate", label = "Наклон в воздухе" },

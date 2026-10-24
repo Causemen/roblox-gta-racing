@@ -28,6 +28,7 @@ local VehicleTuning = {
 	FullSteerSpeed = 30, -- ниже этой скорости руль слабее
 	YawResponse = 10,
 	LateralGrip = 14,
+	RoadGuide = 8, -- на кусках трека с меткой Guide (петля) машина доворачивается вдоль дороги, рад/с на радиан ошибки
 
 	-- Управление в воздухе
 	AirPitchRate = 2.2,

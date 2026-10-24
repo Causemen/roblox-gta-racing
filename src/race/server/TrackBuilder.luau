@@ -74,7 +74,7 @@ type Builder = {
 
 -- Кусок трека длиной length от текущей точки вперед. extra удлиняет его симметрично,
 -- чтобы закрыть щели на внешней стороне поворота.
-local function placePiece(builder: Builder, length: number, extra: number, boost: boolean?)
+local function placePiece(builder: Builder, length: number, extra: number, boost: boolean?, guide: boolean?)
 	builder.pieceCount += 1
 	table.insert(builder.path, {
 		cframe = builder.cf * CFrame.new(0, 0, -length / 2),
@@ -84,7 +84,10 @@ local function placePiece(builder: Builder, length: number, extra: number, boost
 	local center = builder.cf * CFrame.new(0, -THICKNESS / 2, -length / 2)
 	local fullLength = length + extra
 
-	makePart(builder.pieces, "Road", Vector3.new(WIDTH, THICKNESS, fullLength), center, TRACK_COLOR)
+	local road = makePart(builder.pieces, "Road", Vector3.new(WIDTH, THICKNESS, fullLength), center, TRACK_COLOR)
+	if guide then
+		road:SetAttribute("Guide", true) -- машина сама доворачивается вдоль этого куска (client/VehicleController)
+	end
 
 	local railColor = RAIL_COLORS[builder.pieceCount % #RAIL_COLORS + 1]
 	local railY = THICKNESS / 2 + RAIL_HEIGHT / 2
@@ -156,7 +159,7 @@ local function placeLoop(builder: Builder, radius: number)
 	builder.cf *= skew
 	for index = 1, steps do
 		builder.cf *= half
-		placePiece(builder, chord, if index == 1 or index == steps then seam else 0.2)
+		placePiece(builder, chord, if index == 1 or index == steps then seam else 0.2, nil, true)
 		builder.cf *= half
 	end
 	builder.cf *= skew:Inverse()

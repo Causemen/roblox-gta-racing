@@ -177,6 +177,7 @@ function VehicleController.attach(car: Model, input: Input.Input, carsFolder: In
 
 		-- Подвеска и боковое сцепление на каждом колесе.
 		local grounded = 0
+		local guideRoad: Instance? = nil
 		local normalSum = Vector3.zero
 		for i, offset in wheelOffsets do
 			local origin = cf:PointToWorldSpace(offset)
@@ -186,6 +187,9 @@ function VehicleController.attach(car: Model, input: Input.Input, carsFolder: In
 				normalSum += hit.Normal
 				if hit.Instance:GetAttribute("Boost") then
 					boostUntil = now + VehicleTuning.BoostDuration
+				end
+				if not guideRoad and hit.Instance:GetAttribute("Guide") then
+					guideRoad = hit.Instance
 				end
 				local compression = rayLength - hit.Distance
 				local pointVelocity = chassis:GetVelocityAtPosition(origin)
@@ -236,6 +240,16 @@ function VehicleController.attach(car: Model, input: Input.Input, carsFolder: In
 
 			local desiredYaw =
 				VehicleMath.desiredYawRate(forwardSpeed, steer, VehicleTuning.TurnRate, VehicleTuning.FullSteerSpeed)
+			if guideRoad and VehicleTuning.RoadGuide > 0 then
+				-- Петля идет винтом и уводит дорогу вбок: без доворота машина ехала бы в забор.
+				local roadForward = -(guideRoad :: BasePart).CFrame.ZVector
+				local flat = roadForward - up * roadForward:Dot(up)
+				if flat.Magnitude > 0.1 then
+					flat = flat.Unit
+					local misalignment = math.atan2(up:Dot(look:Cross(flat)), look:Dot(flat))
+					desiredYaw += misalignment * VehicleTuning.RoadGuide
+				end
+			end
 			local yawRate = angular:Dot(up)
 			torque.Torque = up * (desiredYaw - yawRate) * VehicleTuning.YawResponse * inertia
 		else
