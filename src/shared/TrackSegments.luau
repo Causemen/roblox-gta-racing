@@ -5,6 +5,7 @@
 export type Segment =
 	{ kind: "grid" }
 	| { kind: "straight", length: number, boost: boolean? }
+	| { kind: "taper", length: number, width: number } -- плавно меняет ширину трека до width
 	| { kind: "turn", angle: number, radius: number }
 	| { kind: "vcurve", angle: number, radius: number }
 	| { kind: "loop", radius: number }
@@ -15,7 +16,8 @@ export type Segment =
 local segments: { Segment } = {
 	{ kind = "straight", length = 110 },
 	{ kind = "grid" },
-	{ kind = "straight", length = 140 },
+	{ kind = "straight", length = 40 },
+	{ kind = "taper", length = 100, width = 40 }, -- старт шириной на четыре машины, дальше трек уже
 	{ kind = "turn", angle = 90, radius = 180 },
 	{ kind = "straight", length = 60 },
 	{ kind = "checkpoint" },

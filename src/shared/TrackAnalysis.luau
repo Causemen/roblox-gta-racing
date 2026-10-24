@@ -6,6 +6,7 @@
 export type Segment =
 	{ kind: "grid" }
 	| { kind: "straight", length: number, boost: boolean? }
+	| { kind: "taper", length: number, width: number }
 	| { kind: "turn", angle: number, radius: number }
 	| { kind: "vcurve", angle: number, radius: number }
 	| { kind: "loop", radius: number }
@@ -80,6 +81,9 @@ function TrackAnalysis.analyze(segments: { Segment }, tuning: Tuning, accel: (nu
 				then (segment.length - math.min(PAD_LENGTH, segment.length * 0.5)) / 2
 				else nil
 			drive(segment.length, boostAt)
+			runway += segment.length
+		elseif segment.kind == "taper" then
+			drive(segment.length)
 			runway += segment.length
 		elseif segment.kind == "vcurve" then
 			drive(math.rad(math.abs(segment.angle)) * segment.radius)
