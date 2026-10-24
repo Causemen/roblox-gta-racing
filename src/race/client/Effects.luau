@@ -6,17 +6,29 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 local CameraController = require(script.Parent.CameraController)
+local Input = require(script.Parent.Input)
 local VehicleController = require(script.Parent.VehicleController)
 
 -- Звуки: сюда вставить rbxassetid://... из Toolbox. Пока id пуст, звука нет, остальное работает.
 local SOUND_IDS = {
 	engine = "", -- петля мотора, высота тона следует за скоростью
 	boost = "", -- разовый звук включения буста
-	land = "", -- посадка после прыжка
+	land = "rbxassetid://77458829204986", -- удар об землю после прыжка
+	crash = "rbxassetid://99755220376998", -- удар машины об стену
+	enter = "rbxassetid://132523351027438", -- посадка в машину при появлении
+	horn = "rbxassetid://132205340213071", -- гудок (H или кнопка на экране)
 }
 
 -- Фоновая музыка заезда: список rbxassetid://..., играют по кругу. Пусто = музыки нет.
-local MUSIC_IDS: { string } = {}
+local MUSIC_IDS: { string } = {
+	"rbxassetid://98076378627817",
+	"rbxassetid://80317022777602",
+	"rbxassetid://121260043969206",
+	"rbxassetid://114168319718059",
+	"rbxassetid://104690291459123",
+	"rbxassetid://119620835721674",
+	"rbxassetid://127337768162638",
+}
 local MUSIC_VOLUME = 0.35
 
 local SPEED_LINES_FROM = 120 -- с этой скорости появляются линии
@@ -47,6 +59,11 @@ local emitter: ParticleEmitter? = nil
 local engine: Sound? = nil
 local boostSound: Sound? = nil
 local landSound: Sound? = nil
+local crashSound: Sound? = nil
+local enterSound: Sound? = nil
+local hornSound: Sound? = nil
+local peakSpeed = 0
+local lastCrashAt = 0
 
 local wasGrounded = true
 local wasBoosting = false
@@ -171,6 +188,15 @@ local function clearCar()
 	if landSound then
 		landSound:Destroy()
 	end
+	if crashSound then
+		crashSound:Destroy()
+	end
+	if enterSound then
+		enterSound:Destroy()
+	end
+	if hornSound then
+		hornSound:Destroy()
+	end
 	engine, boostSound, landSound = nil, nil, nil
 	attachedCar = nil
 end
@@ -221,6 +247,13 @@ local function attachCar(car: Model, chassis: BasePart)
 	engine = makeSound(chassis, SOUND_IDS.engine, true)
 	boostSound = makeSound(chassis, SOUND_IDS.boost, false)
 	landSound = makeSound(chassis, SOUND_IDS.land, false)
+	crashSound = makeSound(chassis, SOUND_IDS.crash, false)
+	enterSound = makeSound(chassis, SOUND_IDS.enter, false)
+	hornSound = makeSound(chassis, SOUND_IDS.horn, false)
+	peakSpeed = 0
+	if enterSound then
+		enterSound:Play()
+	end
 	if engine then
 		engine:Play()
 	end
@@ -261,6 +294,18 @@ local function update(dt: number)
 	for _, trail in trails do
 		trail.Enabled = speed > 90 or boosting
 		trail.Color = ColorSequence.new(color)
+	end
+
+	-- Удар о стену: скорость резко упала, пока машина на земле.
+	peakSpeed = math.max(speed, peakSpeed - dt * 80)
+	if telemetry.grounded and peakSpeed > 70 and speed < peakSpeed * 0.6 and now - lastCrashAt > 1 then
+		lastCrashAt = now
+		if crashSound then
+			crashSound:Play()
+		end
+	end
+	if speed < peakSpeed * 0.6 then
+		peakSpeed = speed
 	end
 
 	-- Включение буста.
@@ -337,9 +382,17 @@ local function startMusic()
 	playNext()
 end
 
-function Effects.start()
+function Effects.start(input: Input.Input)
 	buildGui()
 	startMusic()
+	input.onHorn.Event:Connect(function()
+		if hornSound then
+			hornSound:Play()
+		end
+	end)
+	VehicleController.respawned.Event:Connect(function()
+		peakSpeed = 0
+	end)
 	RunService.RenderStepped:Connect(update)
 end
 

@@ -237,6 +237,21 @@ function TouchControls.start()
 		end
 	end)
 
+	local horn = makeButton(
+		gui,
+		"♪",
+		"",
+		Vector2.new(42, 42),
+		UDim2.new(1, -MARGIN * 3 - 42 - 78, 0, 20),
+		Vector2.new(1, 0),
+		ACCENT
+	)
+	bindHold(horn, function(down)
+		if down then
+			Input.horn()
+		end
+	end)
+
 	-- На телефоне без клавиатуры газ жмется сам: новичку надо только рулить и тормозить.
 	local enabled = isTouchOnly()
 	local function place(look: Look, anchor: Vector2, position: UDim2)

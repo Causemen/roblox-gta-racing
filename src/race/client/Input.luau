@@ -9,6 +9,7 @@ export type Input = {
 	steer: number, -- -1..1, влево/вправо (в воздухе: крен)
 	autoGas: boolean, -- газ жмется сам: новичку на телефоне остается только руль и тормоз
 	onRespawn: BindableEvent,
+	onHorn: BindableEvent,
 }
 
 local Input = {}
@@ -26,6 +27,7 @@ local state: Input = {
 	steer = 0,
 	autoGas = false,
 	onRespawn = Instance.new("BindableEvent"),
+	onHorn = Instance.new("BindableEvent"),
 }
 
 local function refresh()
@@ -66,6 +68,10 @@ function Input.respawn()
 	state.onRespawn:Fire()
 end
 
+function Input.horn()
+	state.onHorn:Fire()
+end
+
 function Input.start(): Input
 	bindHold("CarGas", "gas", Enum.KeyCode.W, Enum.KeyCode.Up)
 	bindHold("CarBrake", "brake", Enum.KeyCode.S, Enum.KeyCode.Down)
@@ -78,6 +84,13 @@ function Input.start(): Input
 		end
 		return Enum.ContextActionResult.Sink
 	end, false, Enum.KeyCode.R, Enum.KeyCode.ButtonY)
+
+	ContextActionService:BindAction("CarHorn", function(_, inputState: Enum.UserInputState)
+		if inputState == Enum.UserInputState.Begin then
+			state.onHorn:Fire()
+		end
+		return Enum.ContextActionResult.Sink
+	end, false, Enum.KeyCode.H, Enum.KeyCode.ButtonL3)
 
 	ContextActionService:BindAction("CarGamepad", function(_, inputState: Enum.UserInputState, input: InputObject)
 		local released = inputState == Enum.UserInputState.End or inputState == Enum.UserInputState.Cancel
