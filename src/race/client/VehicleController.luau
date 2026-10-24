@@ -19,6 +19,9 @@ export type Telemetry = {
 
 local VehicleController = {}
 
+-- Срабатывает после респауна, аргумент: причина ("manual", "fall", "stuck").
+VehicleController.respawned = Instance.new("BindableEvent")
+
 local WORLD_UP = Vector3.yAxis
 
 local active: {
@@ -74,7 +77,7 @@ function VehicleController.getCar(): Model?
 	return if active then active.car else nil
 end
 
-function VehicleController.respawn()
+function VehicleController.respawn(reason: string?)
 	local current = active
 	if not current or not respawnCFrame or current.chassis.Anchored then
 		return
@@ -83,6 +86,7 @@ function VehicleController.respawn()
 	current.car:PivotTo(respawnCFrame)
 	current.chassis.AssemblyLinearVelocity = respawnCFrame.LookVector * 40
 	current.chassis.AssemblyAngularVelocity = Vector3.zero
+	VehicleController.respawned:Fire(reason or "manual")
 end
 
 function VehicleController.detach()
@@ -230,14 +234,14 @@ function VehicleController.attach(car: Model, input: Input.Input, carsFolder: In
 
 		-- Упал с трассы или застрял: возвращаем на последний чекпоинт.
 		if chassis.Position.Y < killHeight then
-			VehicleController.respawn()
+			VehicleController.respawn("fall")
 			return
 		end
 		if enabled and velocity.Magnitude < VehicleTuning.StuckSpeed then
 			stuckFor += dt
 			if stuckFor >= VehicleTuning.StuckSeconds then
 				stuckFor = 0
-				VehicleController.respawn()
+				VehicleController.respawn("stuck")
 			end
 		else
 			stuckFor = 0

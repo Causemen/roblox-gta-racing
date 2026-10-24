@@ -53,6 +53,12 @@ local function makePart(parent: Instance, name: string, size: Vector3, cframe: C
 	return part
 end
 
+type PathPoint = {
+	cframe: CFrame,
+	segment: number,
+	kind: string,
+}
+
 type Builder = {
 	cf: CFrame,
 	pieces: Folder,
@@ -61,12 +67,20 @@ type Builder = {
 	minY: number,
 	checkpoints: { Checkpoint },
 	grid: { CFrame },
+	path: { PathPoint },
+	segmentIndex: number,
+	segmentKind: string,
 }
 
 -- Кусок трека длиной length от текущей точки вперед. extra удлиняет его симметрично,
 -- чтобы закрыть щели на внешней стороне поворота.
 local function placePiece(builder: Builder, length: number, extra: number, boost: boolean?)
 	builder.pieceCount += 1
+	table.insert(builder.path, {
+		cframe = builder.cf * CFrame.new(0, 0, -length / 2),
+		segment = builder.segmentIndex,
+		kind = builder.segmentKind,
+	})
 	local center = builder.cf * CFrame.new(0, -THICKNESS / 2, -length / 2)
 	local fullLength = length + extra
 
@@ -199,6 +213,28 @@ local function placeGrid(builder: Builder)
 	line.CanCollide = false
 end
 
+-- Центральная линия трека невидимыми деталями: по ней едет автопилот (client/AutoPilot).
+local function placePath(builder: Builder, model: Model)
+	local folder = Instance.new("Folder")
+	folder.Name = "Path"
+	for index, point in builder.path do
+		local marker = Instance.new("Part")
+		marker.Name = `P{index}`
+		marker.Anchored = true
+		marker.CanCollide = false
+		marker.CanQuery = false
+		marker.CanTouch = false
+		marker.Transparency = 1
+		marker.Size = Vector3.one
+		marker.CFrame = point.cframe
+		marker:SetAttribute("Index", index)
+		marker:SetAttribute("Segment", point.segment)
+		marker:SetAttribute("Kind", point.kind)
+		marker.Parent = folder
+	end
+	folder.Parent = model
+end
+
 function TrackBuilder.build(parent: Instance, layout: TrackLayout.Layout?): BuiltTrack
 	local spec = layout or TrackLayout
 	local model = Instance.new("Model")
@@ -219,9 +255,14 @@ function TrackBuilder.build(parent: Instance, layout: TrackLayout.Layout?): Buil
 		minY = spec.origin.Position.Y,
 		checkpoints = {},
 		grid = {},
+		path = {},
+		segmentIndex = 0,
+		segmentKind = "",
 	}
 
-	for _, segment in spec.segments do
+	for index, segment in spec.segments do
+		builder.segmentIndex = index
+		builder.segmentKind = segment.kind
 		if segment.kind == "straight" then
 			placePiece(builder, segment.length, 0.2, segment.boost)
 		elseif segment.kind == "turn" then
@@ -244,6 +285,8 @@ function TrackBuilder.build(parent: Instance, layout: TrackLayout.Layout?): Buil
 			placeGrid(builder)
 		end
 	end
+
+	placePath(builder, model)
 
 	local gridStart = builder.grid[1] or spec.origin
 	model:SetAttribute("CameraCFrame", CFrame.lookAt((gridStart * CFrame.new(30, 40, 60)).Position, gridStart.Position))

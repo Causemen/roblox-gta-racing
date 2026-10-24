@@ -35,6 +35,7 @@ jobs:
           mkdir -p build
           rojo build hub.project.json -o build/hub.rbxl
           rojo build race.project.json -o build/race.rbxl
+          rojo build autotest.project.json -o build/autotest.rbxl
 
       - name: Tests
         run: for f in tests/*.spec.luau; do lune run "$f"; done
