@@ -1,0 +1,22 @@
+{
+  "name": "SkyStuntRacers-Hub",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "Shared": { "$path": "src/shared" },
+      "Packages": { "$path": { "optional": "Packages" } }
+    },
+    "ServerScriptService": {
+      "Server": { "$path": "src/hub/server" },
+      "ServerPackages": { "$path": { "optional": "ServerPackages" } }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "Client": { "$path": "src/hub/client" }
+      }
+    },
+    "Workspace": {
+      "$properties": { "StreamingEnabled": true }
+    }
+  }
+}

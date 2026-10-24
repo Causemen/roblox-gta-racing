@@ -1,0 +1,25 @@
+{
+  "name": "SkyStuntRacers-Race",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "Shared": { "$path": "src/shared" },
+      "Packages": { "$path": { "optional": "Packages" } }
+    },
+    "ServerScriptService": {
+      "Server": { "$path": "src/race/server" },
+      "ServerPackages": { "$path": { "optional": "ServerPackages" } }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "Client": { "$path": "src/race/client" }
+      }
+    },
+    "Players": {
+      "$properties": { "CharacterAutoLoads": false }
+    },
+    "Workspace": {
+      "$properties": { "StreamingEnabled": false }
+    }
+  }
+}

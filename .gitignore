@@ -1,0 +1,18 @@
+# Пакеты Wally ставятся командой `wally install`
+/Packages
+/ServerPackages
+/DevPackages
+wally.lock.bak
+
+# Сборки Rojo
+*.rbxl
+*.rbxlx
+*.rbxm
+*.rbxmx
+/build
+
+# Типы для luau-lsp, генерируются заново
+sourcemap.json
+globalTypes.d.luau
+
+.DS_Store

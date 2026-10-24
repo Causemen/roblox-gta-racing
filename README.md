@@ -1,1 +1,72 @@
-# roblox-gta-racing
+# Sky Stunt Racers: каркас проекта
+
+Заготовка репозитория под Rojo: два плейса (хаб и гоночный сервер) и общий код в `src/shared`.
+
+## Инструменты
+
+| Инструмент | Зачем | Где ставится |
+|---|---|---|
+| Roblox Studio | Сборка уровней, запуск, публикация | Компьютер |
+| Rokit | Ставит инструменты ниже нужных версий по `rokit.toml` | Компьютер |
+| Rojo 7.7.1 + плагин Rojo для Studio | Синхронизация кода из папки в Studio | Rokit + Studio |
+| Selene | Линтер Luau | Rokit |
+| StyLua | Автоформат кода | Rokit |
+| Wally | Пакеты (Signal, ProfileStore и т.п.) | Rokit |
+| Lune | Скрипты и тесты вне Studio | Rokit |
+| VS Code + расширения из `.vscode/extensions.json` | Редактор: автодополнение (luau-lsp), формат, линт, Rojo | Компьютер |
+| Git + GitHub | История кода и CI (`.github/workflows/ci.yml`) | Компьютер / GitHub |
+
+## Структура
+
+```
+hub.project.json     плейс хаба (гараж, магазин, матчмейкинг)
+race.project.json    гоночный плейс (заезд, чекпоинты, машина)
+src/shared           общий код: Config, RaceState
+src/hub/{server,client}
+src/race/{server,client}
+```
+
+## Первый запуск на компьютере
+
+1. Установить Roblox Studio, VS Code и Git.
+2. Установить Rokit: https://github.com/rojo-rbx/rokit (Windows: установщик из Releases; macOS/Linux: скрипт из README).
+3. В папке проекта: `rokit install`, затем `rokit trust` при запросе.
+4. `rojo plugin install` ставит плагин Rojo в Studio той же версии, что и CLI.
+5. `wally install` (создаст `Packages/` и `ServerPackages/`).
+6. Открыть папку в VS Code и принять рекомендованные расширения.
+7. `rojo serve hub.project.json`, в Studio открыть плагин Rojo и нажать Connect.
+
+Для гоночного плейса то же самое с `race.project.json` (в отдельном плейсе той же игры).
+
+## Проверки
+
+```
+stylua src tests    # отформатировать
+for f in tests/*.spec.luau; do lune run "$f"; done  # тесты логики
+selene src          # линт
+rojo build hub.project.json -o build/hub.rbxl
+```
+
+## Прототип заезда (race-плейс)
+
+Что уже есть: трек «Sky Loop» строится кодом при старте сервера (буст-пластины, два прыжка, петля, 5 чекпоинтов и финиш), аркадная машина на raycast-подвеске, прилипание к трассе в петле, управление в воздухе, респаун на последний чекпоинт, цикл заезда Lobby → Countdown → Racing → Finished, места и результаты.
+
+| Файл | Что делает |
+|---|---|
+| `src/race/server/TrackLayout.luau` | Описание трека списком сегментов: прямые, повороты, подъемы, петля, яма, чекпоинты |
+| `src/race/server/TrackBuilder.luau` | Строит детали трека, ворота чекпоинтов и стартовую решетку |
+| `src/race/server/CarFactory.luau` | Собирает модель машины |
+| `src/race/server/RaceManager.luau` | Цикл заезда, проверка чекпоинтов на сервере, места |
+| `src/race/client/VehicleController.luau` | Физика машины у владельца: подвеска, мотор, руль, буст, гравитация к трассе |
+| `src/race/client/CameraController.luau`, `Hud.luau`, `Input.luau` | Камера, интерфейс, управление (клавиатура, геймпад, кнопки на телефоне) |
+| `src/shared/VehicleTuning.luau` | Все числа управляемости в одном месте |
+
+### Как запустить
+
+1. `rojo serve race.project.json`, в Studio создать пустой плейс (Baseplate), подключиться плагином Rojo.
+2. Play: через 10 секунд лобби машина появится на старте.
+3. Для гонки на 4 игроков: вкладка Test → Clients and Servers → 4 Players → Start.
+
+Управление: WASD или стрелки, в воздухе W/S наклоняют нос, A/D дают крен; R респаун. Трек висит на высоте 500, при падении машина возвращается на последний чекпоинт.
+
+Подбор ощущения от машины: правьте `VehicleTuning.luau` (скорость, разгон, руль, сцепление, мягкость подвески), Rojo сразу переносит правку в Studio, дальше перезапустить Play.
