@@ -18,10 +18,17 @@ local target: BasePart? = nil
 local overview: CFrame? = nil
 local smoothedUp = Vector3.yAxis
 local position: Vector3? = nil
+local fovKick = 0 -- добавка к FOV, например на бусте
+local smoothedKick = 0
 
 function CameraController.follow(part: BasePart?)
 	target = part
 	position = nil
+end
+
+-- Добавка к FOV в градусах (0 = нет), меняется плавно.
+function CameraController.setFovKick(degrees: number)
+	fovKick = degrees
 end
 
 function CameraController.setOverview(cframe: CFrame?)
@@ -59,7 +66,8 @@ function CameraController.start()
 		camera.CFrame = CFrame.lookAt(position :: Vector3, focus, smoothedUp)
 
 		local speed = part.AssemblyLinearVelocity.Magnitude
-		local goalFov = BASE_FOV + (MAX_FOV - BASE_FOV) * math.clamp(speed / FOV_SPEED, 0, 1)
+		smoothedKick += (fovKick - smoothedKick) * math.min(1, dt * 6)
+		local goalFov = BASE_FOV + (MAX_FOV - BASE_FOV) * math.clamp(speed / FOV_SPEED, 0, 1) + smoothedKick
 		camera.FieldOfView += (goalFov - camera.FieldOfView) * alpha
 	end)
 end
