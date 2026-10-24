@@ -1,6 +1,6 @@
 @echo off
-rem Один клик: обновить код с GitHub, собрать гоночный плейс и открыть его в Studio.
-rem Запуск: двойной щелчок по play.cmd. Другая ветка: play.cmd имя-ветки
+rem One click: pull latest code from GitHub, build the race place, open it in Studio.
+rem Usage: double-click play.cmd, or: play.cmd branch-name
 cd /d "%~dp0"
 
 set BRANCH=%1
@@ -13,7 +13,7 @@ git pull origin %BRANCH%
 if not exist build mkdir build
 rojo build race.project.json -o build\race.rbxl
 if errorlevel 1 (
-	echo Сборка не удалась, Studio не открываю.
+	echo Build failed, not opening Studio.
 	pause
 	exit /b 1
 )
