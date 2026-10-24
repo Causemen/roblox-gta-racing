@@ -23,6 +23,7 @@ local RAIL_HEIGHT = 3
 local RAIL_THICKNESS = 1
 local MAX_STEP_DEGREES = 6
 local LOOP_SHIFT_MARGIN = 10 -- на сколько выезд из петли смещен вбок сверх ширины трека
+local GATE_HEIGHT = 70 -- перекладина рамки чекпоинта высоко над трассой: прыжки летят выше 18 studs
 local TAPER_PIECE = 10 -- длина куска в сужении
 local GRID_ROWS = 3
 local GRID_COLUMNS = { -21, -7, 7, 21 } -- четыре машины в ряд
@@ -214,13 +215,20 @@ local function placeGate(builder: Builder, isFinish: boolean)
 	local cf = builder.cf
 	local color = if isFinish then FINISH_COLOR else GATE_COLOR
 	local pillarX = builder.width / 2 + 3
-	local zoneSize = Vector3.new(builder.width + 8, 30, 12)
+	local zoneSize = Vector3.new(builder.width + 8, GATE_HEIGHT + 10, 12)
 	for _, side in { -1, 1 } do
-		local pillar = makePart(gate, "Pillar", Vector3.new(2, 18, 2), cf * CFrame.new(side * pillarX, 9, 0), color)
+		local pillar = makePart(
+			gate,
+			"Pillar",
+			Vector3.new(2, GATE_HEIGHT, 2),
+			cf * CFrame.new(side * pillarX, GATE_HEIGHT / 2, 0),
+			color
+		)
 		pillar.Material = Enum.Material.Neon
 	end
-	local bar = makePart(gate, "Bar", Vector3.new(pillarX * 2 + 2, 2, 2), cf * CFrame.new(0, 18, 0), color)
+	local bar = makePart(gate, "Bar", Vector3.new(pillarX * 2 + 2, 2, 2), cf * CFrame.new(0, GATE_HEIGHT, 0), color)
 	bar.Material = Enum.Material.Neon
+	bar.CanCollide = false -- машина в прыжке пролетает сквозь рамку, не цепляясь
 	if isFinish then
 		local line =
 			makePart(gate, "FinishLine", Vector3.new(builder.width, 0.1, 4), cf * CFrame.new(0, 0.05, 0), FINISH_COLOR)
