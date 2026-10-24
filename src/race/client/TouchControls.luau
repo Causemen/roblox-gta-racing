@@ -133,8 +133,20 @@ function TouchControls.start()
 		autoGas.BackgroundColor3 = if enabled then ON else IDLE
 		Input.setAutoGas(enabled)
 		gas.Visible = not enabled
-		noseDown.Visible = enabled
-		noseUp.Visible = enabled
+		-- Автогаз: ▲▼ стоят вместо газа справа. Ручной газ: они над ◀ ▶ слева.
+		noseDown.Visible = true
+		noseUp.Visible = true
+		if enabled then
+			noseDown.AnchorPoint = Vector2.new(1, 1)
+			noseDown.Position = UDim2.new(1, -MARGIN, 1, -MARGIN)
+			noseUp.AnchorPoint = Vector2.new(1, 1)
+			noseUp.Position = UDim2.new(1, -MARGIN, 1, -MARGIN * 2 - BUTTON)
+		else
+			noseUp.AnchorPoint = Vector2.new(0, 1)
+			noseUp.Position = UDim2.new(0, MARGIN, 1, -MARGIN * 2 - BUTTON)
+			noseDown.AnchorPoint = Vector2.new(0, 1)
+			noseDown.Position = UDim2.new(0, MARGIN * 2 + BUTTON, 1, -MARGIN * 2 - BUTTON)
+		end
 	end
 	showAutoGas()
 	autoGas.Activated:Connect(function()
