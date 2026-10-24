@@ -1,16 +1,12 @@
 --!strict
 -- Тестовый стант-трек «Sky Loop», от старта до финиша (point-to-point, как многие стант-гонки GTA).
--- Углы в градусах: turn > 0 вправо, vcurve > 0 вверх. Длины и радиусы в studs.
+-- Сами участки лежат в shared/TrackSegments, чтобы их можно было проверять расчетом в Lune.
 
-export type Segment =
-	{ kind: "grid" }
-	| { kind: "straight", length: number, boost: boolean? }
-	| { kind: "turn", angle: number, radius: number }
-	| { kind: "vcurve", angle: number, radius: number }
-	| { kind: "loop", radius: number }
-	| { kind: "gap", length: number, drop: number }
-	| { kind: "checkpoint" }
-	| { kind: "finish" }
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local TrackSegments = require(ReplicatedStorage.Shared.TrackSegments)
+
+export type Segment = TrackSegments.Segment
 
 export type Layout = {
 	name: string,
@@ -21,55 +17,7 @@ export type Layout = {
 local layout: Layout = {
 	name = "Sky Loop",
 	origin = CFrame.new(0, 500, 0),
-	segments = {
-		{ kind = "straight", length = 110 },
-		{ kind = "grid" },
-		{ kind = "straight", length = 140 },
-		{ kind = "turn", angle = 90, radius = 180 },
-		{ kind = "straight", length = 60 },
-		{ kind = "checkpoint" },
-
-		-- Первый прыжок: буст, трамплин, яма, длинная посадка с запасом на торможение
-		{ kind = "straight", length = 50, boost = true },
-		{ kind = "vcurve", angle = 15, radius = 150 },
-		{ kind = "straight", length = 25 },
-		{ kind = "gap", length = 45, drop = 12 },
-		{ kind = "straight", length = 200 },
-		{ kind = "checkpoint" },
-
-		-- Широкий разворот и петля
-		{ kind = "turn", angle = -120, radius = 190 },
-		{ kind = "straight", length = 100 },
-		{ kind = "straight", length = 40, boost = true },
-		{ kind = "loop", radius = 45 },
-		{ kind = "straight", length = 120 },
-		{ kind = "checkpoint" },
-
-		-- Подъем, вираж и спуск
-		{ kind = "vcurve", angle = 12, radius = 250 },
-		{ kind = "straight", length = 80 },
-		{ kind = "vcurve", angle = -12, radius = 250 },
-		{ kind = "turn", angle = 90, radius = 190 },
-		{ kind = "vcurve", angle = -15, radius = 250 },
-		{ kind = "straight", length = 60 },
-		{ kind = "vcurve", angle = 15, radius = 250 },
-		{ kind = "checkpoint" },
-
-		-- Змейка
-		{ kind = "turn", angle = -45, radius = 160 },
-		{ kind = "turn", angle = 45, radius = 160 },
-		{ kind = "straight", length = 80 },
-		{ kind = "checkpoint" },
-
-		-- Финальный прыжок на финишную прямую
-		{ kind = "straight", length = 60, boost = true },
-		{ kind = "vcurve", angle = 12, radius = 150 },
-		{ kind = "straight", length = 20 },
-		{ kind = "gap", length = 45, drop = 15 },
-		{ kind = "straight", length = 140 },
-		{ kind = "finish" },
-		{ kind = "straight", length = 120 },
-	},
+	segments = TrackSegments,
 }
 
 return layout
