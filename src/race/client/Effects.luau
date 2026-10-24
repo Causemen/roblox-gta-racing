@@ -15,6 +15,10 @@ local SOUND_IDS = {
 	land = "", -- посадка после прыжка
 }
 
+-- Фоновая музыка заезда: список rbxassetid://..., играют по кругу. Пусто = музыки нет.
+local MUSIC_IDS: { string } = {}
+local MUSIC_VOLUME = 0.35
+
 local SPEED_LINES_FROM = 120 -- с этой скорости появляются линии
 local SPEED_LINES_FULL = 260
 local LINE_COUNT = 24
@@ -315,8 +319,27 @@ local function update(dt: number)
 	end
 end
 
+local function startMusic()
+	if #MUSIC_IDS == 0 then
+		return
+	end
+	local music = Instance.new("Sound")
+	music.Name = "RaceMusic"
+	music.Volume = MUSIC_VOLUME
+	music.Parent = game:GetService("SoundService")
+	local index = 0
+	local function playNext()
+		index = index % #MUSIC_IDS + 1
+		music.SoundId = MUSIC_IDS[index]
+		music:Play()
+	end
+	music.Ended:Connect(playNext)
+	playNext()
+end
+
 function Effects.start()
 	buildGui()
+	startMusic()
 	RunService.RenderStepped:Connect(update)
 end
 
