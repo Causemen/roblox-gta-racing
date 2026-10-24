@@ -17,8 +17,8 @@ local segments: { Segment } = {
 	{ kind = "straight", length = 110 },
 	{ kind = "grid" },
 	{ kind = "straight", length = 40 },
-	{ kind = "taper", length = 100, width = 40 }, -- старт шириной на четыре машины, дальше трек уже
-	{ kind = "turn", angle = 90, radius = 180 },
+	{ kind = "taper", length = 100, width = 44 }, -- старт шириной на четыре машины, дальше трек уже
+	{ kind = "turn", angle = 90, radius = 240 },
 	{ kind = "straight", length = 60 },
 	{ kind = "checkpoint" },
 
@@ -27,13 +27,13 @@ local segments: { Segment } = {
 	{ kind = "vcurve", angle = 15, radius = 150 },
 	{ kind = "straight", length = 25 },
 	{ kind = "gap", length = 45, drop = 12 },
-	{ kind = "straight", length = 200 },
+	{ kind = "straight", length = 420 },
 	{ kind = "checkpoint" },
 
 	-- Широкий разворот и петля
-	{ kind = "turn", angle = -120, radius = 190 },
+	{ kind = "turn", angle = -120, radius = 400 },
 	{ kind = "straight", length = 100 },
-	{ kind = "straight", length = 40, boost = true },
+	{ kind = "straight", length = 40 },
 	{ kind = "loop", radius = 70 },
 	{ kind = "straight", length = 120 },
 	{ kind = "checkpoint" },
@@ -42,15 +42,15 @@ local segments: { Segment } = {
 	{ kind = "vcurve", angle = 12, radius = 250 },
 	{ kind = "straight", length = 80 },
 	{ kind = "vcurve", angle = -12, radius = 250 },
-	{ kind = "turn", angle = 90, radius = 190 },
+	{ kind = "turn", angle = 90, radius = 240 },
 	{ kind = "vcurve", angle = -15, radius = 250 },
 	{ kind = "straight", length = 60 },
 	{ kind = "vcurve", angle = 15, radius = 250 },
 	{ kind = "checkpoint" },
 
 	-- Змейка
-	{ kind = "turn", angle = -45, radius = 160 },
-	{ kind = "turn", angle = 45, radius = 160 },
+	{ kind = "turn", angle = -45, radius = 240 },
+	{ kind = "turn", angle = 45, radius = 240 },
 	{ kind = "straight", length = 80 },
 	{ kind = "checkpoint" },
 
@@ -59,7 +59,7 @@ local segments: { Segment } = {
 	{ kind = "vcurve", angle = 12, radius = 150 },
 	{ kind = "straight", length = 20 },
 	{ kind = "gap", length = 45, drop = 15 },
-	{ kind = "straight", length = 140 },
+	{ kind = "straight", length = 200 },
 	{ kind = "finish" },
 	{ kind = "straight", length = 120 },
 }

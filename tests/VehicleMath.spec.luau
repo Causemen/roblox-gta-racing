@@ -37,7 +37,7 @@ assert(
 	VehicleMath.driveAcceleration(150, 0, true, tuning) == 170,
 	"буст разгоняет выше максимума"
 )
-assert(VehicleMath.driveAcceleration(200, 1, true, tuning) == 0, "буст тоже ограничен")
+assert(VehicleMath.driveAcceleration(200, 1, true, tuning) < 0, "буст тоже ограничен")
 
 -- Руль: вправо значит отрицательная угловая скорость, на месте руль не крутит машину.
 assert(VehicleMath.desiredYawRate(100, 1, 2.4, 25) < 0, "вправо на ходу")

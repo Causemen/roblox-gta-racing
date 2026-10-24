@@ -18,6 +18,7 @@ export type Tuning = {
 	TurnRate: number,
 	BrakeDeceleration: number,
 	BoostDuration: number,
+	LateralGrip: number,
 }
 
 export type Report = {
@@ -31,6 +32,8 @@ local PAD_LENGTH = 12 -- длина буст-пластины, как в TrackBu
 local STEER_MARGIN = 0.85 -- какую долю максимальной скорости рулевого берем за предел поворота
 local REACTION_SECONDS = 0.7 -- пока игрок заметит поворот и начнет тормозить
 local LOOP_FACTOR = 1.3 -- запас над скоростью, при которой гравитация прижимает машину в верхней точке петли
+local MAX_SLIP = 9 -- боковой снос в повороте v²/(R*сцепление), studs/с: больше уже выносит на ограждение
+local LANDING_FRACTION = 0.8 -- посадка после ямы должна лечь в первые 80% следующей прямой
 local JUMP_MARGIN = 1.1 -- долет прыжка должен быть длиннее ямы минимум на столько
 
 local TrackAnalysis = {}
@@ -55,6 +58,7 @@ function TrackAnalysis.analyze(segments: { Segment }, tuning: Tuning, accel: (nu
 	local speed = 0
 	local boostLeft = 0
 	local pitchDegrees = 0
+	local overshoot: number? = nil -- на сколько после ямы прыжок еще пролетит
 	local runway = 0 -- сколько прямой подряд перед текущим участком, где можно тормозить
 
 	local function drive(length: number, boostAt: number?)
@@ -71,12 +75,25 @@ function TrackAnalysis.analyze(segments: { Segment }, tuning: Tuning, accel: (nu
 	end
 
 	for _, segment in segments do
+		if segment.kind ~= "straight" and segment.kind ~= "checkpoint" then
+			overshoot = nil
+		end
 		if segment.kind == "grid" then
 			started = true
 			speed, boostLeft, runway = 0, 0, 0
 		elseif not started then
 			continue
 		elseif segment.kind == "straight" then
+			if overshoot then
+				if overshoot > segment.length * LANDING_FRACTION then
+					table.insert(
+						problems,
+						`перелет: машина приземлится на {math.floor(overshoot)} после ямы, прямая только {segment.length}`
+					)
+				end
+				runway -= math.min(overshoot, segment.length)
+				overshoot = nil
+			end
 			local boostAt = if segment.boost
 				then (segment.length - math.min(PAD_LENGTH, segment.length * 0.5)) / 2
 				else nil
@@ -90,7 +107,11 @@ function TrackAnalysis.analyze(segments: { Segment }, tuning: Tuning, accel: (nu
 			pitchDegrees += segment.angle
 			runway += math.rad(math.abs(segment.angle)) * segment.radius
 		elseif segment.kind == "turn" then
-			local limit = segment.radius * tuning.TurnRate * STEER_MARGIN
+			overshoot = nil
+			local limit = math.min(
+				segment.radius * tuning.TurnRate * STEER_MARGIN,
+				math.sqrt(MAX_SLIP * segment.radius * tuning.LateralGrip)
+			)
 			table.insert(notes, `{shortName(segment)}: вход {math.floor(speed)}, предел {math.floor(limit)}`)
 			if speed > limit then
 				local stopping = (speed * speed - limit * limit) / (2 * tuning.BrakeDeceleration)
@@ -145,6 +166,7 @@ function TrackAnalysis.analyze(segments: { Segment }, tuning: Tuning, accel: (nu
 				)
 			end
 			drive(segment.length)
+			overshoot = reach - segment.length
 			pitchDegrees = 0
 			runway = 0
 		end

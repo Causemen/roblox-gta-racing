@@ -254,7 +254,8 @@ function VehicleController.attach(car: Model, input: Input.Input, carsFolder: In
 			local yawRate = angular:Dot(up)
 			torque.Torque = up * (desiredYaw - yawRate) * VehicleTuning.YawResponse * inertia
 		else
-			if boosting then
+			if boosting and forwardSpeed < VehicleTuning.BoostSpeed * flightScale then
+				-- Предел буста действует и в воздухе: без него прыжок разгонял машину до 350 и перелетал трассу.
 				force += look * VehicleTuning.BoostAcceleration * 0.5 * mass * flightScale * flightScale
 			end
 			-- В воздухе: газ/тормоз наклоняют нос, руль дает крен. Без кнопок машина выравнивается.

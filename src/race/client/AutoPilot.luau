@@ -25,6 +25,7 @@ local LOOKAHEAD_SECONDS = 0.45
 local STEER_GAIN = 2.2
 local PROBE_STEP = 40 -- шаг, которым смотрим вперед в поисках поворотов, studs
 local PROBE_COUNT = 7
+local MAX_SLIP = 9 -- как в TrackAnalysis: боковой снос в повороте v²/(R*сцепление), больше нельзя
 local STEER_MARGIN = 0.85 -- какую долю максимального поворота руля считаем безопасной
 local BRAKE_MARGIN = 0.6 -- какую долю тормозов закладываем в расчет
 local BRAKE_SLACK = 8 -- превышение скорости, после которого жмем тормоз
@@ -50,6 +51,7 @@ local reported = false
 local crashes = 0
 local railHits = 0
 local respawns = 0
+local lastGround = { at = 0, speed = 0, where = "" } -- где и на какой скорости машина последний раз стояла на дороге
 local maxSpeed = 0
 local lastCrashAt = 0
 local lastRailAt = 0
@@ -123,7 +125,11 @@ local function allowedSpeed(): number
 			local flatSecond = Vector3.new(second.X, 0, second.Z).Unit
 			local angle = math.acos(math.clamp(flatFirst:Dot(flatSecond), -1, 1))
 			if angle > 0.02 then
-				local limit = STEER_MARGIN * VehicleTuning.TurnRate * PROBE_STEP / angle
+				local radius = PROBE_STEP / angle
+				local limit = math.min(
+					STEER_MARGIN * VehicleTuning.TurnRate * radius,
+					math.sqrt(MAX_SLIP * radius * VehicleTuning.LateralGrip)
+				)
 				local reachable =
 					math.sqrt(limit * limit + 2 * VehicleTuning.BrakeDeceleration * BRAKE_MARGIN * (k - 1) * PROBE_STEP)
 				allowed = math.min(allowed, reachable)
@@ -201,7 +207,9 @@ local function drive()
 	maxSpeed = math.max(maxSpeed, telemetry.speed)
 	detectCrash(telemetry.speed, telemetry.grounded)
 
-	if not telemetry.grounded then
+	if telemetry.grounded then
+		lastGround = { at = os.clock(), speed = telemetry.speed, where = describe(nearest) }
+	else
 		-- В воздухе руль дает крен, а не поворот: ничего не нажимаем, машина сама выравнивается.
 		input.throttle = 0
 		input.steer = 0
@@ -314,7 +322,13 @@ function AutoPilot.start(playerInput: Input.Input, track: Model)
 		end
 		table.clear(history)
 		if enabled then
-			print(`[AutoTest] {elapsed()} респаун ({reason}): {describe(nearest)}`)
+			print(
+				`[AutoTest] {elapsed()} респаун ({reason}): {describe(nearest)}; последняя опора {lastGround.where}, `
+					.. `скорость {math.floor(lastGround.speed)}, без опоры {string.format(
+						"%.1f",
+						os.clock() - lastGround.at
+					)} с`
+			)
 		end
 	end)
 	RunService.PreSimulation:Connect(drive)
