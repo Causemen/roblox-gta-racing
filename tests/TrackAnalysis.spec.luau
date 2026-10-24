@@ -1,5 +1,5 @@
 -- Запуск: lune run tests/TrackAnalysis.spec.luau
--- Проверяет раскладку трека расчетом на обычной машине и на пресете «GTA-стант».
+-- Проверяет раскладку трека расчетом на машине по умолчанию и на каждом пресете.
 
 -- VehicleTuning берет Vector3 из Roblox, в Lune его нет.
 Vector3 = {
@@ -29,7 +29,7 @@ local function analyze(segments: { TrackAnalysis.Segment }, tuning: any): TrackA
 end
 
 -- Основной трек проходим на всех наборах настроек.
-local setups = { { "исходная машина", tuningWith(nil) } }
+local setups = { { "по умолчанию", tuningWith(nil) } }
 for _, preset in VehiclePresets do
 	table.insert(setups, { preset.name, tuningWith(preset.values) })
 end
@@ -42,16 +42,16 @@ for _, setup in setups do
 end
 
 -- Сам анализатор должен находить ошибки: буст перед поворотом, короткий разбег и недолет прыжка.
-local gta = tuningWith(VehiclePresets[1].values)
+local fast = tuningWith(nil)
 local boostIntoTurn: { TrackAnalysis.Segment } = {
 	{ kind = "grid" },
 	{ kind = "straight", length = 140 },
 	{ kind = "straight", length = 50, boost = true },
 	{ kind = "straight", length = 40 },
-	{ kind = "turn", angle = 90, radius = 90 },
+	{ kind = "turn", angle = 90, radius = 60 },
 }
 assert(
-	#analyze(boostIntoTurn, gta).problems == 1,
+	#analyze(boostIntoTurn, fast).problems == 1,
 	"буст перед тесным поворотом должен ловиться"
 )
 
@@ -60,13 +60,13 @@ local shortJump: { TrackAnalysis.Segment } = {
 	{ kind = "straight", length = 30 },
 	{ kind = "gap", length = 200, drop = 5 },
 }
-assert(#analyze(shortJump, gta).problems == 1, "недолет прыжка должен ловиться")
+assert(#analyze(shortJump, fast).problems == 1, "недолет прыжка должен ловиться")
 
 local slowLoop: { TrackAnalysis.Segment } = {
 	{ kind = "grid" },
 	{ kind = "straight", length = 10 },
 	{ kind = "loop", radius = 45 },
 }
-assert(#analyze(slowLoop, gta).problems == 1, "петля без разгона должна ловиться")
+assert(#analyze(slowLoop, fast).problems == 1, "петля без разгона должна ловиться")
 
 print("TrackAnalysis: ok")

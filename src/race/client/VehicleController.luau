@@ -36,7 +36,11 @@ local active: {
 }? =
 	nil
 
+local AIR_TIME_DELAY = 0.15 -- сколько секунд в воздухе до замедления времени, чтобы кочки не включали его
+
 local enabled = false
+local airTime = 0
+local timeScale: number? = nil -- во сколько раз замедлено время, пока машина в полете
 local respawnCFrame: CFrame? = nil
 local killHeight = -math.huge
 local telemetry: Telemetry = { speed = 0, grounded = false, boosting = false }
@@ -86,6 +90,7 @@ function VehicleController.respawn(reason: string?)
 	current.car:PivotTo(respawnCFrame)
 	current.chassis.AssemblyLinearVelocity = respawnCFrame.LookVector * 40
 	current.chassis.AssemblyAngularVelocity = Vector3.zero
+	airTime, timeScale = 0, nil
 	VehicleController.respawned:Fire(reason or "manual")
 end
 
@@ -99,6 +104,7 @@ function VehicleController.detach()
 		instance:Destroy()
 	end
 	active = nil
+	airTime, timeScale = 0, nil
 	telemetry = { speed = 0, grounded = false, boosting = false }
 end
 
@@ -192,10 +198,28 @@ function VehicleController.attach(car: Model, input: Input.Input, carsFolder: In
 		end
 		local onGround = grounded >= 2
 
+		-- Замедление времени в полете: скорость умножаем на k, гравитацию на k², траектория остается той же,
+		-- но проходится дольше. На посадке скорость возвращаем.
+		local slowdown = math.clamp(VehicleTuning.AirTimeScale, 0.2, 1)
+		if onGround then
+			airTime = 0
+			if timeScale then
+				chassis.AssemblyLinearVelocity = velocity / timeScale
+				timeScale = nil
+			end
+		else
+			airTime += dt
+			if not timeScale and airTime >= AIR_TIME_DELAY and slowdown < 1 then
+				timeScale = slowdown
+				chassis.AssemblyLinearVelocity = velocity * slowdown
+			end
+		end
+		local flightScale = timeScale or 1
+
 		-- Своя гравитация: на трассе тянет в поверхность, в воздухе плавно возвращается вниз.
 		local targetGravity = if onGround then -normalSum.Unit else -WORLD_UP
 		gravityDir = gravityDir:Lerp(targetGravity, math.min(1, dt * VehicleTuning.GravityBlend)).Unit
-		local force = (gravityDir + WORLD_UP) * mass * gravity -- + WORLD_UP гасит обычную гравитацию мира
+		local force = (gravityDir * flightScale * flightScale + WORLD_UP) * mass * gravity -- + WORLD_UP гасит гравитацию мира
 
 		local throttle = if enabled then input.throttle else 0
 		local steer = if enabled then input.steer else 0
@@ -216,7 +240,7 @@ function VehicleController.attach(car: Model, input: Input.Input, carsFolder: In
 			torque.Torque = up * (desiredYaw - yawRate) * VehicleTuning.YawResponse * inertia
 		else
 			if boosting then
-				force += look * VehicleTuning.BoostAcceleration * 0.5 * mass
+				force += look * VehicleTuning.BoostAcceleration * 0.5 * mass * flightScale * flightScale
 			end
 			-- В воздухе: газ/тормоз наклоняют нос, руль дает крен. Без кнопок машина выравнивается.
 			local desired = right * (-throttle * VehicleTuning.AirPitchRate)

@@ -1,5 +1,6 @@
 --!strict
--- Готовые наборы значений VehicleTuning для сравнения в TuningPanel. Не меняют игру сами по себе.
+-- Готовые наборы значений VehicleTuning для сравнения в TuningPanel. Не меняют игру сами по себе:
+-- значения по умолчанию лежат в VehicleTuning, а набор поверх них только подменяет перечисленные поля.
 
 export type Preset = {
 	name: string,
@@ -8,29 +9,29 @@ export type Preset = {
 
 local presets: { Preset } = {
 	{
-		-- Отправная точка под ощущение стант-гонок GTA Online: выше скорость и разгон, сильное сцепление и
-		-- прилипание к трассе, мощный длинный буст, мягче подвеска, активнее управление в воздухе.
-		name = "GTA-стант",
+		-- Машина до перехода на ощущение GTA: ниже скорость, мягче сцепление, без замедления времени в полете.
+		name = "Старый",
 		values = {
-			MaxSpeed = 170,
-			MaxReverseSpeed = 45,
-			Acceleration = 110,
-			BrakeDeceleration = 170,
-			RollingDrag = 0.2,
-			OverSpeedDecay = 1.2,
-			BoostSpeed = 260,
-			BoostAcceleration = 260,
-			BoostDuration = 2,
-			TurnRate = 2.2,
-			FullSteerSpeed = 30,
-			YawResponse = 10,
-			LateralGrip = 14,
-			DampingRatio = 0.5,
-			GravityBlend = 8,
-			AirPitchRate = 2.2,
-			AirRollRate = 3,
-			AirResponse = 5,
-			AirLeveling = 0.6,
+			MaxSpeed = 130,
+			MaxReverseSpeed = 40,
+			Acceleration = 75,
+			BrakeDeceleration = 150,
+			RollingDrag = 0.25,
+			OverSpeedDecay = 1.5,
+			BoostSpeed = 195,
+			BoostAcceleration = 170,
+			BoostDuration = 1.5,
+			TurnRate = 2.4,
+			FullSteerSpeed = 25,
+			YawResponse = 8,
+			LateralGrip = 10,
+			DampingRatio = 0.35,
+			GravityBlend = 6,
+			AirPitchRate = 2.5,
+			AirRollRate = 2.5,
+			AirResponse = 4,
+			AirLeveling = 1.2,
+			AirTimeScale = 1,
 		},
 	},
 }

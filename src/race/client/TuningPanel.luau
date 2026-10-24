@@ -10,7 +10,7 @@ local VehiclePresets = require(ReplicatedStorage.Shared.VehiclePresets)
 local VehicleTuning = require(ReplicatedStorage.Shared.VehicleTuning)
 
 -- Геометрию подвески (RestLength, WheelRadius и т.п.) не трогаем: сервер строит по ней модель машины один раз.
-local PARAMS: { { key: string, label: string } } = {
+local PARAMS: { { key: string, label: string, min: number?, max: number? } } = {
 	{ key = "MaxSpeed", label = "Максимальная скорость" },
 	{ key = "MaxReverseSpeed", label = "Скорость назад" },
 	{ key = "Acceleration", label = "Разгон" },
@@ -30,6 +30,12 @@ local PARAMS: { { key: string, label: string } } = {
 	{ key = "AirRollRate", label = "Крен в воздухе" },
 	{ key = "AirResponse", label = "Отклик в воздухе" },
 	{ key = "AirLeveling", label = "Выравнивание в воздухе" },
+	{
+		key = "AirTimeScale",
+		label = "Замедление времени в полёте (меньше = медленнее)",
+		min = 0.2,
+		max = 1,
+	},
 }
 
 local MIN_FACTOR = 0.25 -- ползунок идет от 25% до 250% исходного значения
@@ -117,8 +123,8 @@ function TuningPanel.start()
 
 	for _, param in PARAMS do
 		local key = param.key
-		local min = defaults[key] * MIN_FACTOR
-		local max = defaults[key] * MAX_FACTOR
+		local min = param.min or defaults[key] * MIN_FACTOR
+		local max = param.max or defaults[key] * MAX_FACTOR
 
 		local row = Instance.new("Frame")
 		row.Size = UDim2.new(1, -10, 0, 44)
