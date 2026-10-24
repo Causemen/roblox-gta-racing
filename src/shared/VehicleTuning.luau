@@ -1,5 +1,6 @@
 --!strict
 -- Настройки аркадной машины. Скорости в studs/s (1 stud/s примерно 1 км/ч), ускорения в studs/s².
+-- Таблица не заморожена: в Studio ее на лету меняет TuningPanel (правки живут только в локальной копии клиента).
 
 local VehicleTuning = {
 	-- Подвеска (raycast, по лучу на каждое колесо)
@@ -42,4 +43,4 @@ local VehicleTuning = {
 	StuckSpeed = 4,
 }
 
-return table.freeze(VehicleTuning)
+return VehicleTuning

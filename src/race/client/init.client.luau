@@ -10,6 +10,7 @@ local CameraController = require(script.CameraController)
 local Hud = require(script.Hud)
 local Input = require(script.Input)
 local RaceRules = require(ReplicatedStorage.Shared.RaceRules)
+local TuningPanel = require(script.TuningPanel)
 local VehicleController = require(script.VehicleController)
 
 local localPlayer = Players.LocalPlayer :: Player
@@ -23,6 +24,9 @@ CameraController.start()
 CameraController.setOverview(track:GetAttribute("CameraCFrame") :: CFrame?)
 VehicleController.setKillHeight((track:GetAttribute("KillHeight") :: number?) or -math.huge)
 input.onRespawn.Event:Connect(VehicleController.respawn)
+if RunService:IsStudio() then
+	TuningPanel.start()
+end
 
 local state = "Lobby"
 local raceStartedAt = 0
