@@ -17,7 +17,7 @@ export type BuiltTrack = {
 	killHeight: number,
 }
 
-local WIDTH = 36
+local WIDTH = 56 -- машина 5 в ширину: четыре в ряд с зазорами и запасом у ограждений
 local THICKNESS = 2
 local RAIL_HEIGHT = 3
 local RAIL_THICKNESS = 1
@@ -25,7 +25,7 @@ local MAX_STEP_DEGREES = 6
 local LOOP_SHIFT = WIDTH + 10 -- на сколько выезд из петли смещен вбок от въезда
 local ZONE_SIZE = Vector3.new(WIDTH + 8, 30, 12)
 local GRID_ROWS = 6
-local GRID_COLUMN_OFFSET = 7
+local GRID_COLUMN_OFFSET = 12
 local GRID_ROW_SPACING = 14
 
 -- Ограждения без трения: машина скользит вдоль них, а не залипает и не разворачивается.

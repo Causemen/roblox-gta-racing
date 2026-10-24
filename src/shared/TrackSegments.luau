@@ -32,7 +32,7 @@ local segments: { Segment } = {
 	{ kind = "turn", angle = -120, radius = 190 },
 	{ kind = "straight", length = 100 },
 	{ kind = "straight", length = 40, boost = true },
-	{ kind = "loop", radius = 45 },
+	{ kind = "loop", radius = 70 },
 	{ kind = "straight", length = 120 },
 	{ kind = "checkpoint" },
 
