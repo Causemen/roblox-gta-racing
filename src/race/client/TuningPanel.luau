@@ -6,6 +6,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
+local VehiclePresets = require(ReplicatedStorage.Shared.VehiclePresets)
 local VehicleTuning = require(ReplicatedStorage.Shared.VehicleTuning)
 
 -- Геометрию подвески (RestLength, WheelRadius и т.п.) не трогаем: сервер строит по ней модель машины один раз.
@@ -99,8 +100,8 @@ function TuningPanel.start()
 	panel.Parent = gui
 
 	local list = Instance.new("ScrollingFrame")
-	list.Size = UDim2.new(1, -16, 1, -56)
-	list.Position = UDim2.fromOffset(8, 8)
+	list.Size = UDim2.new(1, -16, 1, -96)
+	list.Position = UDim2.fromOffset(8, 48)
 	list.BackgroundTransparency = 1
 	list.BorderSizePixel = 0
 	list.ScrollBarThickness = 6
@@ -187,6 +188,33 @@ function TuningPanel.start()
 		end
 	end)
 
+	-- Пресеты: первая кнопка возвращает исходные значения, остальные берутся из VehiclePresets.
+	local function applyValues(values: { [string]: number })
+		for key, value in defaults do
+			tuning[key] = values[key] or value
+		end
+		for _, refresh in refreshers do
+			refresh()
+		end
+	end
+
+	local presetCount = #VehiclePresets + 1
+	local function addPresetButton(index: number, name: string, values: { [string]: number })
+		local button = makeButton(
+			panel,
+			name,
+			UDim2.new(1 / presetCount, -6, 0, 30),
+			UDim2.new((index - 1) / presetCount, 3, 0, 8)
+		)
+		button.Activated:Connect(function()
+			applyValues(values)
+		end)
+	end
+	addPresetButton(1, "Исходный", {})
+	for index, preset in VehiclePresets do
+		addPresetButton(index + 1, preset.name, preset.values)
+	end
+
 	-- Поле для копирования: только измененные значения, готовые вставить в VehicleTuning.luau.
 	local exportBox = Instance.new("TextBox")
 	exportBox.Size = UDim2.new(1, -10, 0, 150)
@@ -221,12 +249,7 @@ function TuningPanel.start()
 	end)
 
 	resetButton.Activated:Connect(function()
-		for key, value in defaults do
-			tuning[key] = value
-		end
-		for _, refresh in refreshers do
-			refresh()
-		end
+		applyValues({})
 		exportBox.Visible = false
 	end)
 
