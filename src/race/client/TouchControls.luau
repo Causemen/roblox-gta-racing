@@ -8,8 +8,8 @@ local UserInputService = game:GetService("UserInputService")
 
 local Input = require(script.Parent.Input)
 
-local BUTTON = 104 -- размер большой кнопки, px
-local MARGIN = 22
+local BUTTON = 78 -- размер большой кнопки, px
+local MARGIN = 18
 local GLASS = Color3.fromRGB(18, 22, 34) -- темное «стекло» кнопки
 local GLASS_TOP = Color3.fromRGB(44, 52, 76)
 local RIM = Color3.fromRGB(190, 205, 255) -- тонкая светлая обводка
@@ -66,7 +66,7 @@ local function makeButton(
 	body.Parent = button
 
 	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 22)
+	corner.CornerRadius = UDim.new(0, 16)
 	corner.Parent = body
 
 	local gradient = Instance.new("UIGradient")
@@ -84,7 +84,7 @@ local function makeButton(
 	local scale = Instance.new("UIScale")
 	scale.Parent = body
 
-	local big = size.Y >= 90
+	local big = size.Y >= 70
 	local iconLabel = Instance.new("TextLabel")
 	iconLabel.Size = UDim2.fromScale(1, if caption == "" then 1 else 0.62)
 	iconLabel.Position = UDim2.fromScale(0, if caption == "" then 0 else 0.08)
@@ -93,7 +93,7 @@ local function makeButton(
 	iconLabel.TextColor3 = Color3.new(1, 1, 1)
 	iconLabel.TextTransparency = 0.05
 	iconLabel.Font = Enum.Font.GothamBold
-	iconLabel.TextSize = if big then 38 elseif (utf8.len(icon) or 1) > 2 then 13 else 22
+	iconLabel.TextSize = if big then 28 elseif (utf8.len(icon) or 1) > 2 then 11 else 17
 	iconLabel.Parent = body
 
 	if caption ~= "" then
@@ -105,7 +105,7 @@ local function makeButton(
 		captionLabel.TextColor3 = RIM
 		captionLabel.TextTransparency = 0.15
 		captionLabel.Font = Enum.Font.GothamMedium
-		captionLabel.TextSize = if big then 14 else 11
+		captionLabel.TextSize = if big then 11 else 9
 		captionLabel.Parent = body
 	end
 
@@ -201,13 +201,13 @@ function TouchControls.start()
 		ACCENT
 	)
 	local respawn =
-		makeButton(gui, "⟲", "", Vector2.new(56, 56), UDim2.new(1, -MARGIN, 0, 20), Vector2.new(1, 0), ACCENT)
+		makeButton(gui, "⟲", "", Vector2.new(42, 42), UDim2.new(1, -MARGIN, 0, 20), Vector2.new(1, 0), ACCENT)
 	local autoGas = makeButton(
 		gui,
 		"АВТО-ГАЗ",
 		"",
-		Vector2.new(104, 56),
-		UDim2.new(1, -MARGIN * 2 - 56, 0, 20),
+		Vector2.new(78, 42),
+		UDim2.new(1, -MARGIN * 2 - 42, 0, 20),
 		Vector2.new(1, 0),
 		ACCENT_ON
 	)
