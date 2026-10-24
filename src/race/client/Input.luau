@@ -13,9 +13,9 @@ export type Input = {
 
 local Input = {}
 
-export type Key = "gas" | "brake" | "left" | "right"
+export type Key = "gas" | "brake" | "left" | "right" | "noseDown" | "noseUp"
 
-local held = { gas = false, brake = false, left = false, right = false }
+local held = { gas = false, brake = false, left = false, right = false, noseDown = false, noseUp = false }
 local stickX = 0
 local triggerGas = 0
 local triggerBrake = 0
@@ -31,7 +31,7 @@ local state: Input = {
 local function refresh()
 	local throttle = (if held.gas then 1 else 0) - (if held.brake then 1 else 0)
 	throttle += triggerGas - triggerBrake
-	state.pitch = math.clamp(throttle, -1, 1)
+	state.pitch = math.clamp(throttle + (if held.noseDown then 1 else 0) - (if held.noseUp then 1 else 0), -1, 1)
 	if state.autoGas and throttle >= 0 then
 		throttle = 1
 	end

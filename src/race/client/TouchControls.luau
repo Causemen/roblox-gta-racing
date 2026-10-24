@@ -95,6 +95,12 @@ function TouchControls.start()
 		makeButton(gui, "Тормоз", BUTTON, UDim2.new(1, -MARGIN * 2 - BUTTON, 1, -MARGIN), Vector2.new(1, 1))
 	local gas = makeButton(gui, "Газ", BUTTON, UDim2.new(1, -MARGIN, 1, -MARGIN), Vector2.new(1, 1))
 	gas.Size = UDim2.fromOffset(BUTTON, BUTTON * 1.6)
+	-- Вместо газа при автогазе: наклон носа в воздухе вперед и назад.
+	local noseDown = makeButton(gui, "▼\nвперёд", BUTTON, UDim2.new(1, -MARGIN, 1, -MARGIN), Vector2.new(1, 1))
+	local noseUp =
+		makeButton(gui, "▲\nназад", BUTTON, UDim2.new(1, -MARGIN, 1, -MARGIN * 2 - BUTTON), Vector2.new(1, 1))
+	noseDown.TextSize = 22
+	noseUp.TextSize = 22
 	local respawn = makeButton(gui, "R", 56, UDim2.new(1, -MARGIN, 0, 20), Vector2.new(1, 0))
 	local autoGas = makeButton(gui, "", 56, UDim2.new(1, -MARGIN * 2 - 56, 0, 20), Vector2.new(1, 0))
 
@@ -110,6 +116,12 @@ function TouchControls.start()
 	bindHold(gas, function(down)
 		Input.setHeld("gas", down)
 	end)
+	bindHold(noseDown, function(down)
+		Input.setHeld("noseDown", down)
+	end)
+	bindHold(noseUp, function(down)
+		Input.setHeld("noseUp", down)
+	end)
 
 	respawn.Text = "Респ."
 	respawn.Activated:Connect(Input.respawn)
@@ -120,6 +132,9 @@ function TouchControls.start()
 		autoGas.Text = if enabled then "Авто\nгаз ✓" else "Авто\nгаз"
 		autoGas.BackgroundColor3 = if enabled then ON else IDLE
 		Input.setAutoGas(enabled)
+		gas.Visible = not enabled
+		noseDown.Visible = enabled
+		noseUp.Visible = enabled
 	end
 	showAutoGas()
 	autoGas.Activated:Connect(function()
