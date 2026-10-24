@@ -11,6 +11,7 @@ local CameraController = require(script.CameraController)
 local Hud = require(script.Hud)
 local Input = require(script.Input)
 local RaceRules = require(ReplicatedStorage.Shared.RaceRules)
+local TouchControls = require(script.TouchControls)
 local TuningPanel = require(script.TuningPanel)
 local VehicleController = require(script.VehicleController)
 
@@ -20,6 +21,7 @@ local track = Workspace:WaitForChild("Track") :: Model
 local carsFolder = Workspace:WaitForChild("Cars")
 
 local input = Input.start()
+TouchControls.start()
 Hud.create()
 CameraController.start()
 CameraController.setOverview(track:GetAttribute("CameraCFrame") :: CFrame?)

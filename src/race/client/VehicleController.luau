@@ -227,6 +227,7 @@ function VehicleController.attach(car: Model, input: Input.Input, carsFolder: In
 
 		local throttle = if enabled then input.throttle else 0
 		local steer = if enabled then input.steer else 0
+		local pitchInput = if enabled then input.pitch else 0
 		local boosting = now < boostUntil
 		local angular = chassis.AssemblyAngularVelocity
 		local inertia = mass * (size.X * size.X + size.Z * size.Z) / 12
@@ -257,9 +258,9 @@ function VehicleController.attach(car: Model, input: Input.Input, carsFolder: In
 				force += look * VehicleTuning.BoostAcceleration * 0.5 * mass * flightScale * flightScale
 			end
 			-- В воздухе: газ/тормоз наклоняют нос, руль дает крен. Без кнопок машина выравнивается.
-			local desired = right * (-throttle * VehicleTuning.AirPitchRate)
+			local desired = right * (-pitchInput * VehicleTuning.AirPitchRate)
 				+ look * (steer * VehicleTuning.AirRollRate)
-			if throttle == 0 and steer == 0 then
+			if pitchInput == 0 and steer == 0 then
 				desired += up:Cross(WORLD_UP) * VehicleTuning.AirLeveling
 			end
 			-- Вращение вокруг «вверх» в воздухе не трогаем, гасим только наклон и крен.
