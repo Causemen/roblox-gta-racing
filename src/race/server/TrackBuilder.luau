@@ -17,15 +17,19 @@ export type BuiltTrack = {
 	killHeight: number,
 }
 
-local WIDTH = 28
+local WIDTH = 36
 local THICKNESS = 2
 local RAIL_HEIGHT = 3
 local RAIL_THICKNESS = 1
 local MAX_STEP_DEGREES = 6
+local LOOP_SHIFT = WIDTH + 10 -- на сколько выезд из петли смещен вбок от въезда
 local ZONE_SIZE = Vector3.new(WIDTH + 8, 30, 12)
 local GRID_ROWS = 6
 local GRID_COLUMN_OFFSET = 7
 local GRID_ROW_SPACING = 14
+
+-- Ограждения без трения: машина скользит вдоль них, а не залипает и не разворачивается.
+local RAIL_PHYSICS = PhysicalProperties.new(1, 0, 0, 100, 100)
 
 local TRACK_COLOR = Color3.fromRGB(45, 48, 56)
 local RAIL_COLORS = { Color3.fromRGB(235, 64, 52), Color3.fromRGB(240, 240, 240) }
@@ -72,8 +76,10 @@ local function placePiece(builder: Builder, length: number, extra: number, boost
 	local railY = THICKNESS / 2 + RAIL_HEIGHT / 2
 	local railX = WIDTH / 2 + RAIL_THICKNESS / 2
 	local railSize = Vector3.new(RAIL_THICKNESS, RAIL_HEIGHT, fullLength)
-	makePart(builder.pieces, "Rail", railSize, center * CFrame.new(-railX, railY, 0), railColor)
-	makePart(builder.pieces, "Rail", railSize, center * CFrame.new(railX, railY, 0), railColor)
+	for _, side in { -1, 1 } do
+		local rail = makePart(builder.pieces, "Rail", railSize, center * CFrame.new(side * railX, railY, 0), railColor)
+		rail.CustomPhysicalProperties = RAIL_PHYSICS
+	end
 
 	if boost then
 		local pad = makePart(
@@ -97,19 +103,17 @@ local function placeArc(
 	angleDegrees: number,
 	radius: number,
 	rotate: (number) -> CFrame,
-	widthGap: boolean,
-	shift: number?
+	widthGap: boolean
 )
 	local steps = math.max(2, math.ceil(math.abs(angleDegrees) / MAX_STEP_DEGREES))
 	local step = math.rad(angleDegrees) / steps
 	local chord = 2 * radius * math.sin(math.abs(step) / 2)
 	local extra = if widthGap then WIDTH * math.tan(math.abs(step) / 2) else 0.2
-	local shiftPerStep = (shift or 0) / steps
 
 	for _ = 1, steps do
 		builder.cf *= rotate(step / 2)
 		placePiece(builder, chord, extra)
-		builder.cf *= rotate(step / 2) * CFrame.new(shiftPerStep, 0, 0)
+		builder.cf *= rotate(step / 2)
 	end
 end
 
@@ -120,6 +124,28 @@ end
 
 local function pitch(angle: number): CFrame
 	return CFrame.Angles(angle, 0, 0)
+end
+
+-- Петля это винтовая линия с осью поперек трека: выезд смещается вбок на LOOP_SHIFT, а куски стоят вдоль
+-- линии и стыкуются без ступенек (боковые сдвиги между кусками давали зубчатые ограждения).
+local function placeLoop(builder: Builder, radius: number)
+	local steps = math.ceil(360 / MAX_STEP_DEGREES)
+	local step = math.rad(360) / steps
+	local drift = LOOP_SHIFT / steps
+	local flat = 2 * radius * math.sin(step / 2)
+	local chord = math.sqrt(flat * flat + drift * drift)
+	local tilt = math.atan2(drift, flat)
+	local skew = yaw(tilt)
+	local half = skew:Inverse() * pitch(step / 2) * skew
+	local seam = WIDTH * math.tan(tilt) -- закрывает клин на стыке с прямой
+
+	builder.cf *= skew
+	for index = 1, steps do
+		builder.cf *= half
+		placePiece(builder, chord, if index == 1 or index == steps then seam else 0.2)
+		builder.cf *= half
+	end
+	builder.cf *= skew:Inverse()
 end
 
 local function placeGate(builder: Builder, isFinish: boolean)
@@ -203,8 +229,7 @@ function TrackBuilder.build(parent: Instance, layout: TrackLayout.Layout?): Buil
 		elseif segment.kind == "vcurve" then
 			placeArc(builder, segment.angle, segment.radius, pitch, false)
 		elseif segment.kind == "loop" then
-			-- Смещаем петлю вбок на ширину трека, чтобы выезд не врезался во въезд.
-			placeArc(builder, 360, segment.radius, pitch, false, WIDTH + 10)
+			placeLoop(builder, segment.radius)
 		elseif segment.kind == "gap" then
 			-- Убираем наклон, переносим черепаху через яму и вниз.
 			local position = builder.cf.Position
