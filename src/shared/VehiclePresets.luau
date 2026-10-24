@@ -25,6 +25,7 @@ local presets: { Preset } = {
 			FullSteerSpeed = 25,
 			YawResponse = 8,
 			LateralGrip = 10,
+			DriftGrip = 1,
 			RoadGuide = 0,
 			DampingRatio = 0.35,
 			GravityBlend = 6,

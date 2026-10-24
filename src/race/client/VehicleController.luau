@@ -153,6 +153,7 @@ function VehicleController.attach(car: Model, input: Input.Input, carsFolder: In
 	local gravityDir = -WORLD_UP
 	local boostUntil = 0
 	local stuckFor = 0
+	local gripScale = 1 -- доля бокового сцепления: падает при сильном руле на скорости (дрифт), плавно
 	local size = chassis.Size
 	local rayLength = VehicleTuning.RestLength + VehicleTuning.WheelRadius
 
@@ -175,6 +176,17 @@ function VehicleController.attach(car: Model, input: Input.Input, carsFolder: In
 		local forwardSpeed = velocity:Dot(look)
 		local now = os.clock()
 
+		-- Дрифт: сильный руль на скорости снижает боковое сцепление, а сцепление возвращается плавно.
+		local driftSteer = math.clamp(
+			(math.abs(if enabled then input.steer else 0) - VehicleTuning.DriftSteerStart)
+				/ math.max(1 - VehicleTuning.DriftSteerStart, 0.01),
+			0,
+			1
+		)
+		local driftSpeed = math.clamp((forwardSpeed - VehicleTuning.DriftMinSpeed) / VehicleTuning.DriftMinSpeed, 0, 1)
+		local targetGrip = 1 - (1 - VehicleTuning.DriftGrip) * driftSteer * driftSpeed
+		gripScale += (targetGrip - gripScale) * math.min(1, dt * 8)
+
 		-- Подвеска и боковое сцепление на каждом колесе.
 		local grounded = 0
 		local guideRoad: Instance? = nil
@@ -194,7 +206,7 @@ function VehicleController.attach(car: Model, input: Input.Input, carsFolder: In
 				local compression = rayLength - hit.Distance
 				local pointVelocity = chassis:GetVelocityAtPosition(origin)
 				local spring = VehicleMath.springForce(compression, -pointVelocity:Dot(up), stiffness, damping)
-				local grip = -right * pointVelocity:Dot(right) * (mass / 4) * VehicleTuning.LateralGrip
+				local grip = -right * pointVelocity:Dot(right) * (mass / 4) * VehicleTuning.LateralGrip * gripScale
 				wheelForces[i].Force = up * spring + grip
 			else
 				wheelForces[i].Force = Vector3.zero
