@@ -28,14 +28,6 @@ local MUSIC_IDS: { string } = {
 	"rbxassetid://80059228606274",
 	"rbxassetid://88378288910365",
 	"rbxassetid://102892380593258",
-} = {
-	"rbxassetid://98076378627817",
-	"rbxassetid://80317022777602",
-	"rbxassetid://121260043969206",
-	"rbxassetid://114168319718059",
-	"rbxassetid://104690291459123",
-	"rbxassetid://119620835721674",
-	"rbxassetid://127337768162638",
 }
 local MUSIC_VOLUME = 0.35
 
