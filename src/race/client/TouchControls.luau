@@ -188,6 +188,16 @@ function TouchControls.start()
 		bottomRight,
 		ACCENT
 	)
+	-- Ручник над тормозом: занос одним пальцем (тормоз с рулем тоже входит в занос, это для тех, кто уже привык).
+	local handbrake = makeButton(
+		gui,
+		"~",
+		"ДРИФТ",
+		square,
+		UDim2.new(1, -MARGIN * 2 - BUTTON, 1, -MARGIN * 2 - BUTTON),
+		bottomRight,
+		ACCENT_ON
+	)
 	-- Вместо газа при автогазе: наклон носа в воздухе вперед и назад.
 	local noseDown =
 		makeButton(gui, "↓", "ВПЕРЁД", square, UDim2.new(1, -MARGIN, 1, -MARGIN), bottomRight, ACCENT)
@@ -220,6 +230,9 @@ function TouchControls.start()
 	end)
 	bindHold(brake, function(down)
 		Input.setHeld("brake", down)
+	end)
+	bindHold(handbrake, function(down)
+		Input.setHeld("handbrake", down)
 	end)
 	bindHold(gas, function(down)
 		Input.setHeld("gas", down)

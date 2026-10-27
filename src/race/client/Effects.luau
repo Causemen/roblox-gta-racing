@@ -43,6 +43,7 @@ local LAND_BIG = 0.5 -- с такого времени полета посадк
 
 local BOOST_COLOR = Color3.fromRGB(60, 255, 120)
 local NORMAL_COLOR = Color3.fromRGB(150, 210, 255)
+local DRIFT_COLOR = Color3.fromRGB(255, 150, 60)
 
 local Effects = {}
 
@@ -281,7 +282,8 @@ local function update(dt: number)
 	local telemetry = VehicleController.getTelemetry()
 	local speed = telemetry.speed
 	local boosting = telemetry.boosting
-	local color = if boosting then BOOST_COLOR else NORMAL_COLOR
+	local drifting = telemetry.drift > 0.3
+	local color = if boosting then BOOST_COLOR elseif drifting then DRIFT_COLOR else NORMAL_COLOR
 
 	-- Линии скорости и растяжка FOV на бусте.
 	local intensity = math.clamp((speed - SPEED_LINES_FROM) / (SPEED_LINES_FULL - SPEED_LINES_FROM), 0, 1)
@@ -293,7 +295,7 @@ local function update(dt: number)
 
 	-- Следы: видны на скорости, на бусте зеленые.
 	for _, trail in trails do
-		trail.Enabled = speed > 90 or boosting
+		trail.Enabled = speed > 90 or boosting or drifting
 		trail.Color = ColorSequence.new(color)
 	end
 
