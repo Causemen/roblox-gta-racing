@@ -26,13 +26,27 @@ TouchControls.start()
 Hud.create()
 CameraController.start()
 Effects.start(input)
-CameraController.setOverview(track:GetAttribute("CameraCFrame") :: CFrame?)
-VehicleController.setKillHeight((track:GetAttribute("KillHeight") :: number?) or -math.huge)
 input.onRespawn.Event:Connect(VehicleController.respawn)
 if RunService:IsStudio() then
 	TuningPanel.start()
-	AutoPilot.start(input, track)
+	AutoPilot.start(input)
 end
+
+-- Сервер между заездами заменяет трек новым: камера, высота падения и путь автопилота берутся с него.
+local function bindTrack(model: Model)
+	track = model
+	CameraController.setOverview(model:GetAttribute("CameraCFrame") :: CFrame?)
+	VehicleController.setKillHeight((model:GetAttribute("KillHeight") :: number?) or -math.huge)
+	if RunService:IsStudio() then
+		AutoPilot.setTrack(model)
+	end
+end
+bindTrack(track)
+Workspace.ChildAdded:Connect(function(child)
+	if child.Name == "Track" and child:IsA("Model") then
+		bindTrack(child)
+	end
+end)
 
 local state = "Lobby"
 local raceStartedAt = 0
@@ -49,6 +63,13 @@ local function flash(text: string, seconds: number, color: Color3?)
 	Hud.setBanner(text, color)
 	bannerUntil = os.clock() + seconds
 end
+
+raceEvent:GetAttributeChangedSignal("TrackName"):Connect(function()
+	local name = raceEvent:GetAttribute("TrackName")
+	if typeof(name) == "string" then
+		flash(`Трек: {name}`, 4)
+	end
+end)
 
 local function onStateChanged()
 	local newState = (raceEvent:GetAttribute("State") :: string?) or "Lobby"

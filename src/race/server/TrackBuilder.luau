@@ -289,9 +289,10 @@ local function placePath(builder: Builder, model: Model)
 end
 
 function TrackBuilder.build(parent: Instance, layout: TrackLayout.Layout?): BuiltTrack
-	local spec = layout or TrackLayout
+	local spec = layout or TrackLayout[1]
 	local model = Instance.new("Model")
 	model.Name = "Track"
+	model:SetAttribute("TrackName", spec.name)
 
 	local pieces = Instance.new("Folder")
 	pieces.Name = "Pieces"
