@@ -7,6 +7,7 @@ export type Input = {
 	throttle: number, -- -1..1, назад/вперед на трассе (с автогазом это 1, пока не нажат тормоз)
 	pitch: number, -- -1..1, кнопки газ/тормоз как есть: в воздухе наклон носа, автогаз его не трогает
 	steer: number, -- -1..1, влево/вправо (в воздухе: крен)
+	handbrake: boolean, -- ручник (Пробел, кнопка «ДРИФТ»): занос на скорости вместе с рулем
 	autoGas: boolean, -- газ жмется сам: новичку на телефоне остается только руль и тормоз
 	onRespawn: BindableEvent,
 	onHorn: BindableEvent,
@@ -14,9 +15,10 @@ export type Input = {
 
 local Input = {}
 
-export type Key = "gas" | "brake" | "left" | "right" | "noseDown" | "noseUp"
+export type Key = "gas" | "brake" | "left" | "right" | "noseDown" | "noseUp" | "handbrake"
 
-local held = { gas = false, brake = false, left = false, right = false, noseDown = false, noseUp = false }
+local held =
+	{ gas = false, brake = false, left = false, right = false, noseDown = false, noseUp = false, handbrake = false }
 local stickX = 0
 local triggerGas = 0
 local triggerBrake = 0
@@ -25,6 +27,7 @@ local state: Input = {
 	throttle = 0,
 	pitch = 0,
 	steer = 0,
+	handbrake = false,
 	autoGas = false,
 	onRespawn = Instance.new("BindableEvent"),
 	onHorn = Instance.new("BindableEvent"),
@@ -41,6 +44,7 @@ local function refresh()
 	if math.abs(stickX) > 0.15 then
 		steer += stickX
 	end
+	state.handbrake = held.handbrake
 	state.throttle = math.clamp(throttle, -1, 1)
 	state.steer = math.clamp(steer, -1, 1)
 end
@@ -77,6 +81,7 @@ function Input.start(): Input
 	bindHold("CarBrake", "brake", Enum.KeyCode.S, Enum.KeyCode.Down)
 	bindHold("CarLeft", "left", Enum.KeyCode.A, Enum.KeyCode.Left)
 	bindHold("CarRight", "right", Enum.KeyCode.D, Enum.KeyCode.Right)
+	bindHold("CarHandbrake", "handbrake", Enum.KeyCode.Space, Enum.KeyCode.ButtonB)
 
 	ContextActionService:BindAction("CarRespawn", function(_, inputState: Enum.UserInputState)
 		if inputState == Enum.UserInputState.Begin then
