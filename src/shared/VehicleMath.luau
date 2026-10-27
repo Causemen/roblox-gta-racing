@@ -21,6 +21,10 @@ export type DriftTuning = {
 	DriftBrakeFactor: number,
 	DriftEnter: number,
 	DriftExit: number,
+	DriftBoostMinTime: number,
+	DriftBoostFullTime: number,
+	DriftBoostMinDuration: number,
+	DriftBoostMaxDuration: number,
 }
 
 local VehicleMath = {}
@@ -148,6 +152,17 @@ function VehicleMath.driftThrottle(throttle: number, drift: number, tuning: Drif
 		return throttle
 	end
 	return throttle * (1 - drift * (1 - tuning.DriftBrakeFactor))
+end
+
+-- Награда за дрифт: сколько секунд буста дать на выходе из заноса, если дрифтовали chargeSeconds.
+-- Короче DriftBoostMinTime награды нет, от DriftBoostFullTime она максимальная, между ними растет линейно.
+function VehicleMath.driftBoostDuration(chargeSeconds: number, tuning: DriftTuning): number
+	if tuning.DriftBoostMaxDuration <= 0 or chargeSeconds < tuning.DriftBoostMinTime then
+		return 0
+	end
+	local span = math.max(tuning.DriftBoostFullTime - tuning.DriftBoostMinTime, 0.01)
+	local t = math.clamp((chargeSeconds - tuning.DriftBoostMinTime) / span, 0, 1)
+	return tuning.DriftBoostMinDuration + (tuning.DriftBoostMaxDuration - tuning.DriftBoostMinDuration) * t
 end
 
 return VehicleMath

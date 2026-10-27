@@ -154,6 +154,7 @@ function VehicleController.attach(car: Model, input: Input.Input, carsFolder: In
 	local gravityDir = -WORLD_UP
 	local boostUntil = 0
 	local stuckFor = 0
+	local driftCharge = 0 -- сколько секунд подряд машина в дрифте: от этого зависит буст на выходе
 	local driftAmount = 0 -- 0..1, плавно нарастает от тормоза/ручника с рулем или от полного руля на скорости
 	local size = chassis.Size
 	local rayLength = VehicleTuning.RestLength + VehicleTuning.WheelRadius
@@ -189,6 +190,16 @@ function VehicleController.attach(car: Model, input: Input.Input, carsFolder: In
 			then VehicleMath.driftTrigger(forwardSpeed, steer, throttle < 0, handbrake, VehicleTuning)
 			else 0
 		driftAmount = VehicleMath.smoothDrift(driftAmount, driftTarget, dt, VehicleTuning)
+		if driftAmount > 0.5 and forwardSpeed > VehicleTuning.DriftMinSpeed * 0.8 then
+			driftCharge += dt
+		elseif driftAmount < 0.3 then
+			-- Вышли из заноса на скорости: награда буст-ускорением. Потеряли скорость (удар): без награды.
+			local reward = VehicleMath.driftBoostDuration(driftCharge, VehicleTuning)
+			if reward > 0 and forwardSpeed > VehicleTuning.DriftMinSpeed then
+				boostUntil = math.max(boostUntil, now + reward)
+			end
+			driftCharge = 0
+		end
 		local gripScale = VehicleMath.driftGrip(driftAmount, slip, VehicleTuning)
 
 		-- Подвеска и боковое сцепление на каждом колесе.

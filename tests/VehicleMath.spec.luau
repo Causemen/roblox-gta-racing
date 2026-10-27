@@ -55,6 +55,10 @@ local drift = {
 	DriftBrakeFactor = 0.35,
 	DriftEnter = 10,
 	DriftExit = 3.5,
+	DriftBoostMinTime = 0.6,
+	DriftBoostFullTime = 2,
+	DriftBoostMinDuration = 0.5,
+	DriftBoostMaxDuration = 1.5,
 }
 
 assert(VehicleMath.slipAngle(100, 0) == 0, "едет прямо, заноса нет")
@@ -132,5 +136,27 @@ assert(
 assert(VehicleMath.driftThrottle(1, 1, drift) == 1, "газ в дрифте не меняется")
 assert(near(VehicleMath.driftThrottle(-1, 1, drift), -0.35), "тормоз в дрифте слабее")
 assert(VehicleMath.driftThrottle(-1, 0, drift) == -1, "вне дрифта тормоз полный")
+
+-- Бонус на выходе из заноса
+assert(VehicleMath.driftBoostDuration(0.3, drift) == 0, "короткий дрифт без награды")
+assert(near(VehicleMath.driftBoostDuration(0.6, drift), 0.5), "порог дает минимальный буст")
+assert(
+	near(VehicleMath.driftBoostDuration(2, drift), 1.5),
+	"полный дрифт дает максимальный буст"
+)
+assert(near(VehicleMath.driftBoostDuration(10, drift), 1.5), "больше максимума не растет")
+assert(
+	VehicleMath.driftBoostDuration(1.0, drift) > 0.5 and VehicleMath.driftBoostDuration(1.0, drift) < 1.5,
+	"между порогом и максимумом растет"
+)
+assert(VehicleMath.driftBoostDuration(
+	5,
+	{
+		DriftBoostMinTime = 0.6,
+		DriftBoostFullTime = 2,
+		DriftBoostMinDuration = 0,
+		DriftBoostMaxDuration = 0,
+	} :: any
+) == 0, "MaxDuration = 0 выключает бонус")
 
 print("VehicleMath: ok")

@@ -40,6 +40,11 @@ local VehicleTuning = {
 	DriftBrakeFactor = 0.35, -- какая доля торможения остается в дрифте
 	DriftEnter = 10, -- как быстро дрифт нарастает, 1/с
 	DriftExit = 3.5, -- как быстро дрифт затухает, 1/с
+	-- Бонус на выходе из заноса: дрифт дольше DriftBoostMinTime секунд дает буст, чем дольше дрифт, тем длиннее буст.
+	DriftBoostMinTime = 0.6,
+	DriftBoostFullTime = 2,
+	DriftBoostMinDuration = 0.5,
+	DriftBoostMaxDuration = 1.5, -- 0 выключает бонус
 	HandbrakeDeceleration = 50, -- замедление от ручника (Пробел / кнопка «ДРИФТ»)
 	RoadGuide = 8, -- на кусках трека с меткой Guide (петля) машина доворачивается вдоль дороги, рад/с на радиан ошибки
 
