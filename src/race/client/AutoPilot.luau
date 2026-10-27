@@ -282,8 +282,10 @@ function AutoPilot.onResults()
 	report(false, nil)
 end
 
-function AutoPilot.start(playerInput: Input.Input, track: Model)
-	input = playerInput
+-- Берет центральную линию нового трека. Зовем при каждой смене трека.
+function AutoPilot.setTrack(track: Model)
+	table.clear(path)
+	nearest, along = 1, 0
 	local folder = track:WaitForChild("Path")
 	local parts = folder:GetChildren()
 	table.sort(parts, function(a: Instance, b: Instance): boolean
@@ -296,6 +298,10 @@ function AutoPilot.start(playerInput: Input.Input, track: Model)
 			kind = part:GetAttribute("Kind") :: string,
 		})
 	end
+end
+
+function AutoPilot.start(playerInput: Input.Input)
+	input = playerInput
 
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "AutoPilot"

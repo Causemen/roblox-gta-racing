@@ -9,10 +9,16 @@ Vector3 = {
 }
 
 local TrackAnalysis = require("../src/shared/TrackAnalysis")
+local TrackCanyon = require("../src/shared/TrackCanyon")
 local TrackSegments = require("../src/shared/TrackSegments")
 local VehicleMath = require("../src/shared/VehicleMath")
 local VehiclePresets = require("../src/shared/VehiclePresets")
 local VehicleTuning = require("../src/shared/VehicleTuning")
+
+local TrackList = {
+	{ name = "Sky Loop", segments = TrackSegments },
+	{ name = "Canyon Rush", segments = TrackCanyon },
+}
 
 local function tuningWith(values: { [string]: number }?)
 	local tuning = table.clone(VehicleTuning) :: any
@@ -34,13 +40,21 @@ local setups = { { "по умолчанию", tuningWith(nil) } }
 for _, preset in VehiclePresets do
 	table.insert(setups, { preset.name, tuningWith(preset.values) })
 end
-for _, setup in setups do
-	local report = analyze(TrackSegments, setup[2])
-	for _, problem in report.problems do
-		print(`[{setup[1]}] проблема: {problem}`)
-	end
-	if setup[2] == setups[1][2] then
-		assert(#report.problems == 0, `Sky Loop не проходится на «{setup[1]}»: {report.problems[1]}`)
+for _, track in TrackList do
+	for _, setup in setups do
+		local report = analyze(track.segments, setup[2])
+		for _, problem in report.problems do
+			print(`[{track.name} / {setup[1]}] проблема: {problem}`)
+		end
+		if setup[2] == setups[1][2] then
+			for _, note in report.notes do
+				print(`[{track.name}] {note}`)
+			end
+			assert(
+				#report.problems == 0,
+				`{track.name} не проходится на «{setup[1]}»: {report.problems[1]}`
+			)
+		end
 	end
 end
 

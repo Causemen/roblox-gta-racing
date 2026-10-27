@@ -12,6 +12,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local RaceRules = require(ReplicatedStorage.Shared.RaceRules)
 local RaceState = require(ReplicatedStorage.Shared.RaceState)
 local TrackBuilder = require(script.Parent.TrackBuilder)
+local TrackLayout = require(script.Parent.TrackLayout)
 
 type Racer = {
 	player: Player,
@@ -25,6 +26,8 @@ local STANDINGS_INTERVAL = 0.5
 
 local RaceManager = {}
 
+local layouts: { TrackLayout.Layout } = {}
+local trackIndex = 0
 local track: TrackBuilder.BuiltTrack
 local raceEvent: RemoteEvent
 local carsFolder: Folder
@@ -39,6 +42,22 @@ local function broadcastState(newState: RaceState.RaceState, duration: number)
 	stateEndsAt = Workspace:GetServerTimeNow() + duration
 	raceEvent:SetAttribute("EndsAt", stateEndsAt)
 	raceEvent:SetAttribute("State", state)
+end
+
+-- Строит трек с номером index вместо прежнего. Зовем только между заездами, когда машин на трассе нет.
+local function loadTrack(index: number)
+	local old = Workspace:FindFirstChild("Track")
+	if old then
+		old:Destroy()
+	end
+	trackIndex = index
+	local layout = layouts[index]
+	track = TrackBuilder.build(Workspace, layout)
+	raceEvent:SetAttribute("Checkpoints", #track.checkpoints)
+	raceEvent:SetAttribute("TrackName", layout.name)
+	print(
+		`[Race] трек «{layout.name}» готов: {#track.checkpoints} чекпоинтов, {#track.grid} мест на старте`
+	)
 end
 
 local function destroyCar(racer: Racer)
@@ -219,23 +238,25 @@ local function loop()
 		broadcastResults()
 		task.wait(Config.ResultsSeconds)
 		clearRacers()
+		loadTrack(trackIndex % #layouts + 1)
 	end
 end
 
-function RaceManager.start(builtTrack: TrackBuilder.BuiltTrack)
-	track = builtTrack
+function RaceManager.start(trackLayouts: { TrackLayout.Layout })
+	layouts = trackLayouts
 
 	local remotes = Instance.new("Folder")
 	remotes.Name = "Remotes"
 	raceEvent = Instance.new("RemoteEvent")
 	raceEvent.Name = "RaceEvent"
-	raceEvent:SetAttribute("Checkpoints", #track.checkpoints)
 	raceEvent.Parent = remotes
 	remotes.Parent = ReplicatedStorage
 
 	carsFolder = Instance.new("Folder")
 	carsFolder.Name = "Cars"
 	carsFolder.Parent = Workspace
+
+	loadTrack(1)
 
 	Players.PlayerRemoving:Connect(function(player)
 		local racer = racers[player]
