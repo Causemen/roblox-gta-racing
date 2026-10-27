@@ -21,6 +21,14 @@ local SOUND_IDS = {
 
 -- Фоновая музыка заезда: список rbxassetid://..., играют по кругу. Пусто = музыки нет.
 local MUSIC_IDS: { string } = {
+	"rbxassetid://100221387261601",
+	"rbxassetid://75764445212230",
+	"rbxassetid://137189594264459",
+	"rbxassetid://72653741821355",
+	"rbxassetid://80059228606274",
+	"rbxassetid://88378288910365",
+	"rbxassetid://102892380593258",
+} = {
 	"rbxassetid://98076378627817",
 	"rbxassetid://80317022777602",
 	"rbxassetid://121260043969206",
