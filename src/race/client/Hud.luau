@@ -2,6 +2,7 @@
 -- Интерфейс заезда: таймер, место, чекпоинты, скорость, крупные надписи и таблица результатов.
 
 local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local Hud = {}
@@ -14,6 +15,7 @@ local speedLabel: TextLabel
 local bannerLabel: TextLabel
 local resultsLabel: TextLabel
 local hintLabel: TextLabel
+local bannerScale: UIScale
 
 local function label(name: string, size: UDim2, position: UDim2, anchor: Vector2, textSize: number): TextLabel
 	local text = Instance.new("TextLabel")
@@ -45,6 +47,8 @@ function Hud.create()
 	checkpointLabel.TextXAlignment = Enum.TextXAlignment.Left
 	speedLabel = label("Speed", UDim2.fromOffset(220, 60), UDim2.new(0.5, 0, 1, -30), Vector2.new(0.5, 1), 40)
 	bannerLabel = label("Banner", UDim2.fromOffset(700, 120), UDim2.fromScale(0.5, 0.35), Vector2.new(0.5, 0.5), 72)
+	bannerScale = Instance.new("UIScale")
+	bannerScale.Parent = bannerLabel
 	hintLabel = label("Hint", UDim2.fromOffset(500, 24), UDim2.new(0.5, 0, 1, -90), Vector2.new(0.5, 1), 16)
 	hintLabel.Font = Enum.Font.GothamMedium
 	hintLabel.Text =
@@ -85,8 +89,17 @@ function Hud.setSpeed(speed: number?, boosting: boolean)
 	speedLabel.TextColor3 = if boosting then Color3.fromRGB(60, 255, 120) else Color3.new(1, 1, 1)
 end
 
-function Hud.setBanner(text: string)
+-- Новая надпись «выскакивает»: быстро растет и оседает. color = nil возвращает белый.
+function Hud.setBanner(text: string, color: Color3?)
+	local changed = text ~= bannerLabel.Text
 	bannerLabel.Text = text
+	bannerLabel.TextColor3 = color or Color3.new(1, 1, 1)
+	if changed and text ~= "" then
+		bannerScale.Scale = 1.7
+		TweenService:Create(bannerScale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+			Scale = 1,
+		}):Play()
+	end
 end
 
 function Hud.showResults(lines: { string }?)

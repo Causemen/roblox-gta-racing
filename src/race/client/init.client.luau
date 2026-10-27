@@ -39,13 +39,14 @@ local raceStartedAt = 0
 local passed = 0
 local finishTime: number? = nil
 local bannerUntil = 0
+local lastCount = 0
 
 local function totalCheckpoints(): number
 	return (raceEvent:GetAttribute("Checkpoints") :: number?) or 0
 end
 
-local function flash(text: string, seconds: number)
-	Hud.setBanner(text)
+local function flash(text: string, seconds: number, color: Color3?)
+	Hud.setBanner(text, color)
 	bannerUntil = os.clock() + seconds
 end
 
@@ -65,7 +66,8 @@ local function onStateChanged()
 	if state == "Racing" then
 		raceStartedAt = Workspace:GetServerTimeNow()
 		AutoPilot.onRaceStart()
-		flash("GO!", 1)
+		flash("GO!", 1, Color3.fromRGB(60, 255, 120))
+		Effects.onGo()
 	end
 	VehicleController.setEnabled(state == "Racing" and finishTime == nil)
 	Hud.setCheckpoint(passed, totalCheckpoints())
@@ -117,7 +119,8 @@ raceEvent.OnClientEvent:Connect(function(message: { [string]: any })
 		end
 		AutoPilot.onCheckpoint(passed, message.total)
 		if passed < message.total then
-			flash(`Чекпоинт {passed}`, 0.8)
+			flash(`Чекпоинт {passed}`, 0.8, Color3.fromRGB(150, 210, 255))
+			Effects.onCheckpoint()
 		end
 	elseif message.kind == "Finished" then
 		finishTime = message.time
@@ -152,7 +155,15 @@ RunService.Heartbeat:Connect(function()
 	end
 
 	if os.clock() >= bannerUntil then
-		Hud.setBanner(if state == "Countdown" then tostring(math.max(1, left)) else "")
+		local count = if state == "Countdown" then math.max(1, left) else 0
+		if count > 0 and count ~= lastCount then
+			Effects.onCountdownTick()
+		end
+		lastCount = count
+		Hud.setBanner(
+			if count > 0 then tostring(count) else "",
+			if count == 1 then Color3.fromRGB(255, 200, 60) else nil
+		)
 	end
 
 	local car = VehicleController.getCar()

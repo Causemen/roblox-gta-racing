@@ -12,6 +12,7 @@ local LOOK_AHEAD = 6
 local FOLLOW_SPEED = 10
 local BASE_FOV = 70
 local MAX_FOV = 95
+local SHAKE_STUDS = 0.9 -- смещение камеры при полной тряске
 local FOV_SPEED = 200 -- на этой скорости FOV максимальный
 
 local target: BasePart? = nil
@@ -20,6 +21,8 @@ local smoothedUp = Vector3.yAxis
 local position: Vector3? = nil
 local fovKick = 0 -- добавка к FOV, например на бусте
 local smoothedKick = 0
+local shake = 0 -- 0..1, затухает сам
+local shakeBase = 0 -- постоянная тряска от скорости/буста
 
 function CameraController.follow(part: BasePart?)
 	target = part
@@ -29,6 +32,15 @@ end
 -- Добавка к FOV в градусах (0 = нет), меняется плавно.
 function CameraController.setFovKick(degrees: number)
 	fovKick = degrees
+end
+
+-- Тряска камеры: impulse (0..1) разовый удар, затухает; base держится, пока выставлен.
+function CameraController.addShake(impulse: number)
+	shake = math.min(1, shake + impulse)
+end
+
+function CameraController.setShakeBase(amount: number)
+	shakeBase = amount
 end
 
 function CameraController.setOverview(cframe: CFrame?)
@@ -63,7 +75,15 @@ function CameraController.start()
 		position = if position then position:Lerp(desired, alpha) else desired
 		local focus = cf.Position + flatLook * LOOK_AHEAD + smoothedUp * 2
 
-		camera.CFrame = CFrame.lookAt(position :: Vector3, focus, smoothedUp)
+		local look = CFrame.lookAt(position :: Vector3, focus, smoothedUp)
+		shake = math.max(0, shake - dt * 2.5)
+		local power = math.min(1, shake + shakeBase)
+		if power > 0.01 then
+			local t = os.clock() * 45
+			local offset = Vector3.new(math.noise(t, 0, 1), math.noise(0, t, 2), 0) * power * SHAKE_STUDS
+			look = look * CFrame.new(offset)
+		end
+		camera.CFrame = look
 
 		local speed = part.AssemblyLinearVelocity.Magnitude
 		smoothedKick += (fovKick - smoothedKick) * math.min(1, dt * 6)

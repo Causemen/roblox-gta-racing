@@ -4,6 +4,8 @@
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local CameraController = require(script.Parent.CameraController)
 local Input = require(script.Parent.Input)
@@ -17,6 +19,10 @@ local SOUND_IDS = {
 	crash = "rbxassetid://99755220376998", -- удар машины об стену
 	enter = "rbxassetid://132523351027438", -- посадка в машину при появлении
 	horn = "rbxassetid://132205340213071", -- гудок (H или кнопка на экране)
+	beep = "", -- короткий сигнал отсчета 3-2-1
+	go = "", -- сигнал старта
+	checkpoint = "", -- проезд чекпоинта
+	drift = "", -- визг шин в заносе (петля)
 }
 
 -- Фоновая музыка заезда: список rbxassetid://..., играют по кругу. Пусто = музыки нет.
@@ -34,9 +40,14 @@ local MUSIC_VOLUME = 0.35
 
 local SPEED_LINES_FROM = 120 -- с этой скорости появляются линии
 local SPEED_LINES_FULL = 260
-local LINE_COUNT = 24
+local MOBILE = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+local LINE_COUNT = if MOBILE then 14 else 24 -- на телефонах линий меньше ради производительности
 local LINE_LIFE = 0.28
 local BOOST_FOV_KICK = 14
+local START_FOV_KICK = 12 -- «пинок» камеры в момент GO
+local START_KICK_SECONDS = 0.7
+local SHAKE_SPEED_MAX = 0.12 -- тряска камеры на полной скорости
+local SHAKE_BOOST = 0.3
 local AIR_LABEL_MIN = 0.6 -- короче этого прыжок не показываем, чтобы кочки не мигали
 local AIR_LABEL_HOLD = 1.4 -- сколько после посадки висит итог
 local LAND_BIG = 0.5 -- с такого времени полета посадка дает искры
@@ -58,6 +69,14 @@ local lineBudget = 0
 local attachedCar: Model? = nil
 local trails: { Trail } = {}
 local emitter: ParticleEmitter? = nil
+local smoke: ParticleEmitter? = nil
+local driftSparks: ParticleEmitter? = nil
+local driftSound: Sound? = nil
+local beepSound: Sound? = nil
+local goSound: Sound? = nil
+local checkpointSound: Sound? = nil
+local flash: Frame
+local startKickUntil = 0
 local engine: Sound? = nil
 local boostSound: Sound? = nil
 local landSound: Sound? = nil
@@ -126,6 +145,14 @@ local function buildGui()
 		table.insert(lines, { frame = frame, born = 0, angle = 0, radius = 0, active = false })
 	end
 
+	flash = Instance.new("Frame")
+	flash.Name = "Flash"
+	flash.Size = UDim2.fromScale(1, 1)
+	flash.BackgroundColor3 = Color3.new(1, 1, 1)
+	flash.BackgroundTransparency = 1
+	flash.BorderSizePixel = 0
+	flash.Parent = gui
+
 	airLabel = makeLabel("AirTime", UDim2.fromScale(0.5, 0.22), 44)
 	boostLabel = makeLabel("Boost", UDim2.fromScale(0.5, 0.3), 30)
 	boostLabel.TextColor3 = BOOST_COLOR
@@ -181,6 +208,12 @@ local function clearCar()
 		emitter:Destroy()
 		emitter = nil
 	end
+	for _, extra in { smoke, driftSparks, driftSound, beepSound, goSound, checkpointSound } :: { Instance? } do
+		if extra then
+			extra:Destroy()
+		end
+	end
+	smoke, driftSparks, driftSound, beepSound, goSound, checkpointSound = nil, nil, nil, nil, nil, nil
 	if engine then
 		engine:Destroy()
 	end
@@ -199,7 +232,7 @@ local function clearCar()
 	if hornSound then
 		hornSound:Destroy()
 	end
-	engine, boostSound, landSound = nil, nil, nil
+	engine, boostSound, landSound, crashSound, enterSound, hornSound = nil, nil, nil, nil, nil, nil
 	attachedCar = nil
 end
 
@@ -246,6 +279,39 @@ local function attachCar(car: Model, chassis: BasePart)
 	sparks.Parent = chassis
 	emitter = sparks
 
+	-- Дым и искры заноса: включаются через Enabled, вне заноса не тратят ресурсов.
+	local rear = Instance.new("Attachment")
+	rear.Position = Vector3.new(0, -0.6, size.Z * 0.45)
+	rear.Parent = chassis
+	local puff = Instance.new("ParticleEmitter")
+	puff.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	puff.Rate = if MOBILE then 14 else 28
+	puff.Lifetime = NumberRange.new(0.5, 0.9)
+	puff.Speed = NumberRange.new(4, 10)
+	puff.SpreadAngle = Vector2.new(25, 25)
+	puff.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1.5), NumberSequenceKeypoint.new(1, 5) })
+	puff.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 1) })
+	puff.Color = ColorSequence.new(Color3.fromRGB(235, 235, 240))
+	puff.Enabled = false
+	puff.Parent = rear
+	smoke = puff
+	local fire = Instance.new("ParticleEmitter")
+	fire.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	fire.Rate = if MOBILE then 15 else 35
+	fire.Lifetime = NumberRange.new(0.2, 0.4)
+	fire.Speed = NumberRange.new(15, 30)
+	fire.SpreadAngle = Vector2.new(40, 40)
+	fire.LightEmission = 1
+	fire.Size = NumberSequence.new(0.9, 0)
+	fire.Color = ColorSequence.new(DRIFT_COLOR)
+	fire.Enabled = false
+	fire.Parent = rear
+	driftSparks = fire
+
+	driftSound = makeSound(chassis, SOUND_IDS.drift, true)
+	beepSound = makeSound(chassis, SOUND_IDS.beep, false)
+	goSound = makeSound(chassis, SOUND_IDS.go, false)
+	checkpointSound = makeSound(chassis, SOUND_IDS.checkpoint, false)
 	engine = makeSound(chassis, SOUND_IDS.engine, true)
 	boostSound = makeSound(chassis, SOUND_IDS.boost, false)
 	landSound = makeSound(chassis, SOUND_IDS.land, false)
@@ -273,6 +339,7 @@ local function update(dt: number)
 		boostLabel.Text = ""
 		updateLines(now, dt, 0, NORMAL_COLOR)
 		CameraController.setFovKick(0)
+		CameraController.setShakeBase(0)
 		return
 	end
 	if car ~= attachedCar then
@@ -291,7 +358,33 @@ local function update(dt: number)
 		intensity = math.max(intensity, 0.7)
 	end
 	updateLines(now, dt, intensity, color)
-	CameraController.setFovKick(if boosting then BOOST_FOV_KICK else 0)
+	local kick = if boosting then BOOST_FOV_KICK else 0
+	if now < startKickUntil then
+		kick = math.max(kick, START_FOV_KICK * (startKickUntil - now) / START_KICK_SECONDS)
+	end
+	CameraController.setFovKick(kick)
+	local shakeBase = SHAKE_SPEED_MAX * intensity
+	if boosting then
+		shakeBase = math.max(shakeBase, SHAKE_BOOST)
+	end
+	CameraController.setShakeBase(shakeBase)
+
+	-- Занос: дым и искры, пока машина на земле и скользит; визг шин громче с силой заноса.
+	local sliding = drifting and telemetry.grounded
+	if smoke then
+		smoke.Enabled = sliding
+	end
+	if driftSparks then
+		driftSparks.Enabled = sliding and telemetry.drift > 0.6
+	end
+	if driftSound then
+		driftSound.Volume = if sliding then math.clamp(telemetry.drift, 0, 1) * 0.6 else 0
+		if sliding and not driftSound.IsPlaying then
+			driftSound:Play()
+		elseif not sliding and driftSound.IsPlaying then
+			driftSound:Stop()
+		end
+	end
 
 	-- Следы: видны на скорости, на бусте зеленые.
 	for _, trail in trails do
@@ -321,6 +414,7 @@ local function update(dt: number)
 		if boostSound then
 			boostSound:Play()
 		end
+		CameraController.addShake(0.5)
 		boostLabel.Text = "ТУРБО!"
 		task.delay(0.8, function()
 			boostLabel.Text = ""
@@ -338,6 +432,7 @@ local function update(dt: number)
 				holdUntil = now + AIR_LABEL_HOLD
 			end
 			if flight >= LAND_BIG then
+				CameraController.addShake(math.clamp(flight * 0.5, 0.3, 1))
 				if emitter then
 					emitter:Emit(math.clamp(math.floor(flight * 30), 12, 60))
 				end
@@ -383,6 +478,40 @@ local function startMusic()
 	end
 	music.Ended:Connect(playNext)
 	playNext()
+end
+
+-- Отсчет 3-2-1: короткий сигнал на каждую цифру.
+function Effects.onCountdownTick()
+	if beepSound then
+		beepSound:Play()
+	end
+end
+
+function Effects.flash(color: Color3, startTransparency: number, seconds: number)
+	flash.BackgroundColor3 = color
+	flash.BackgroundTransparency = startTransparency
+	TweenService:Create(flash, TweenInfo.new(seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		BackgroundTransparency = 1,
+	}):Play()
+end
+
+-- GO: звук, вспышка, толчок камеры и пинок FOV на первых секундах разгона.
+function Effects.onGo()
+	startKickUntil = os.clock() + START_KICK_SECONDS
+	CameraController.addShake(0.6)
+	if goSound then
+		goSound:Play()
+	end
+	Effects.flash(Color3.new(1, 1, 1), 0.7, 0.35)
+end
+
+-- Чекпоинт: звук, мягкая цветная вспышка и крошечный толчок камеры.
+function Effects.onCheckpoint()
+	if checkpointSound then
+		checkpointSound:Play()
+	end
+	CameraController.addShake(0.15)
+	Effects.flash(BOOST_COLOR, 0.82, 0.3)
 end
 
 function Effects.start(input: Input.Input)
