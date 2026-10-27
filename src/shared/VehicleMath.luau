@@ -46,7 +46,7 @@ function VehicleMath.driveAcceleration(speed: number, throttle: number, boosting
 		if speed < tuning.BoostSpeed then
 			return tuning.BoostAcceleration
 		end
-		return 0
+		return -(speed - tuning.BoostSpeed) * tuning.OverSpeedDecay -- перелет через предел буста гасится, а не держится
 	end
 
 	if speed > tuning.MaxSpeed then

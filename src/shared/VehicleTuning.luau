@@ -1,45 +1,55 @@
 --!strict
 -- Настройки аркадной машины. Скорости в studs/s (1 stud/s примерно 1 км/ч), ускорения в studs/s².
+-- Таблица не заморожена: в Studio ее на лету меняет TuningPanel (правки живут только в локальной копии клиента).
 
 local VehicleTuning = {
 	-- Подвеска (raycast, по лучу на каждое колесо)
 	RestLength = 2.2,
 	WheelRadius = 1.2,
 	CompressionAtRest = 0.4, -- доля RestLength, на которую машина проседает стоя
-	DampingRatio = 0.35, -- 1 = критическое демпфирование пружины
+	DampingRatio = 0.5, -- 1 = критическое демпфирование пружины
 	WheelInset = Vector3.new(2.2, 0, 3.4), -- смещение лучей от центра шасси по X и Z
 
 	-- Двигатель и тормоза
-	MaxSpeed = 130,
-	MaxReverseSpeed = 40,
-	Acceleration = 75,
-	BrakeDeceleration = 150,
-	RollingDrag = 0.25, -- доля скорости, теряемая за секунду без газа
-	OverSpeedDecay = 1.5, -- как быстро скорость выше максимума возвращается к нему
+	MaxSpeed = 170,
+	MaxReverseSpeed = 45,
+	Acceleration = 110,
+	BrakeDeceleration = 170,
+	RollingDrag = 0.2, -- доля скорости, теряемая за секунду без газа
+	OverSpeedDecay = 1.2, -- как быстро скорость выше максимума возвращается к нему
 
 	-- Буст-пластины
-	BoostSpeed = 195,
-	BoostAcceleration = 170,
-	BoostDuration = 1.5,
+	BoostSpeed = 260,
+	BoostAcceleration = 260,
+	BoostDuration = 2,
 
 	-- Управление на земле
-	TurnRate = 2.4, -- рад/с на полном руле
-	FullSteerSpeed = 25, -- ниже этой скорости руль слабее
-	YawResponse = 8,
-	LateralGrip = 10,
+	TurnRate = 3.46, -- рад/с на полном руле
+	FullSteerSpeed = 30, -- ниже этой скорости руль слабее
+	YawResponse = 10,
+	LateralGrip = 14,
+	-- Небольшой дрифт: на полном руле и скорости сцепление падает до этой доли, и машину слегка сносит боком.
+	-- 1 = дрифта нет. Начинается с DriftSteerStart (доля руля), нужна скорость от DriftMinSpeed.
+	DriftGrip = 0.6,
+	DriftSteerStart = 0.6,
+	DriftMinSpeed = 70,
+	RoadGuide = 8, -- на кусках трека с меткой Guide (петля) машина доворачивается вдоль дороги, рад/с на радиан ошибки
 
 	-- Управление в воздухе
-	AirPitchRate = 2.5,
-	AirRollRate = 2.5,
-	AirResponse = 4,
-	AirLeveling = 1.2, -- машина сама выравнивается, если игрок не жмет кнопки
+	AirPitchRate = 2.2,
+	AirRollRate = 3,
+	AirResponse = 5,
+	AirLeveling = 0.6, -- машина сама выравнивается, если игрок не жмет кнопки
+	-- Замедление времени в полете: 1 = выкл, 0.5 = полет вдвое медленнее. Траектория та же, но дольше по времени,
+	-- чтобы успеть выровнять машину; при посадке скорость возвращается.
+	AirTimeScale = 0.55,
 
 	-- Прилипание к трассе: на земле гравитация направлена в поверхность (петли, трубы)
-	GravityBlend = 6,
+	GravityBlend = 8,
 
 	-- Автореспаун, если машина стоит на месте
 	StuckSeconds = 3,
 	StuckSpeed = 4,
 }
 
-return table.freeze(VehicleTuning)
+return VehicleTuning

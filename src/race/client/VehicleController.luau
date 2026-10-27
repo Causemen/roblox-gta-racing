@@ -19,6 +19,9 @@ export type Telemetry = {
 
 local VehicleController = {}
 
+-- Срабатывает после респауна, аргумент: причина ("manual", "fall", "stuck").
+VehicleController.respawned = Instance.new("BindableEvent")
+
 local WORLD_UP = Vector3.yAxis
 
 local active: {
@@ -33,7 +36,11 @@ local active: {
 }? =
 	nil
 
+local AIR_TIME_DELAY = 0.15 -- сколько секунд в воздухе до замедления времени, чтобы кочки не включали его
+
 local enabled = false
+local airTime = 0
+local timeScale: number? = nil -- во сколько раз замедлено время, пока машина в полете
 local respawnCFrame: CFrame? = nil
 local killHeight = -math.huge
 local telemetry: Telemetry = { speed = 0, grounded = false, boosting = false }
@@ -74,7 +81,7 @@ function VehicleController.getCar(): Model?
 	return if active then active.car else nil
 end
 
-function VehicleController.respawn()
+function VehicleController.respawn(reason: string?)
 	local current = active
 	if not current or not respawnCFrame or current.chassis.Anchored then
 		return
@@ -83,6 +90,8 @@ function VehicleController.respawn()
 	current.car:PivotTo(respawnCFrame)
 	current.chassis.AssemblyLinearVelocity = respawnCFrame.LookVector * 40
 	current.chassis.AssemblyAngularVelocity = Vector3.zero
+	airTime, timeScale = 0, nil
+	VehicleController.respawned:Fire(reason or "manual")
 end
 
 function VehicleController.detach()
@@ -95,6 +104,7 @@ function VehicleController.detach()
 		instance:Destroy()
 	end
 	active = nil
+	airTime, timeScale = 0, nil
 	telemetry = { speed = 0, grounded = false, boosting = false }
 end
 
@@ -143,6 +153,7 @@ function VehicleController.attach(car: Model, input: Input.Input, carsFolder: In
 	local gravityDir = -WORLD_UP
 	local boostUntil = 0
 	local stuckFor = 0
+	local gripScale = 1 -- доля бокового сцепления: падает при сильном руле на скорости (дрифт), плавно
 	local size = chassis.Size
 	local rayLength = VehicleTuning.RestLength + VehicleTuning.WheelRadius
 
@@ -165,8 +176,20 @@ function VehicleController.attach(car: Model, input: Input.Input, carsFolder: In
 		local forwardSpeed = velocity:Dot(look)
 		local now = os.clock()
 
+		-- Дрифт: сильный руль на скорости снижает боковое сцепление, а сцепление возвращается плавно.
+		local driftSteer = math.clamp(
+			(math.abs(if enabled then input.steer else 0) - VehicleTuning.DriftSteerStart)
+				/ math.max(1 - VehicleTuning.DriftSteerStart, 0.01),
+			0,
+			1
+		)
+		local driftSpeed = math.clamp((forwardSpeed - VehicleTuning.DriftMinSpeed) / VehicleTuning.DriftMinSpeed, 0, 1)
+		local targetGrip = 1 - (1 - VehicleTuning.DriftGrip) * driftSteer * driftSpeed
+		gripScale += (targetGrip - gripScale) * math.min(1, dt * 8)
+
 		-- Подвеска и боковое сцепление на каждом колесе.
 		local grounded = 0
+		local guideRoad: Instance? = nil
 		local normalSum = Vector3.zero
 		for i, offset in wheelOffsets do
 			local origin = cf:PointToWorldSpace(offset)
@@ -177,10 +200,13 @@ function VehicleController.attach(car: Model, input: Input.Input, carsFolder: In
 				if hit.Instance:GetAttribute("Boost") then
 					boostUntil = now + VehicleTuning.BoostDuration
 				end
+				if not guideRoad and hit.Instance:GetAttribute("Guide") then
+					guideRoad = hit.Instance
+				end
 				local compression = rayLength - hit.Distance
 				local pointVelocity = chassis:GetVelocityAtPosition(origin)
 				local spring = VehicleMath.springForce(compression, -pointVelocity:Dot(up), stiffness, damping)
-				local grip = -right * pointVelocity:Dot(right) * (mass / 4) * VehicleTuning.LateralGrip
+				local grip = -right * pointVelocity:Dot(right) * (mass / 4) * VehicleTuning.LateralGrip * gripScale
 				wheelForces[i].Force = up * spring + grip
 			else
 				wheelForces[i].Force = Vector3.zero
@@ -188,13 +214,32 @@ function VehicleController.attach(car: Model, input: Input.Input, carsFolder: In
 		end
 		local onGround = grounded >= 2
 
+		-- Замедление времени в полете: скорость умножаем на k, гравитацию на k², траектория остается той же,
+		-- но проходится дольше. На посадке скорость возвращаем.
+		local slowdown = math.clamp(VehicleTuning.AirTimeScale, 0.2, 1)
+		if onGround then
+			airTime = 0
+			if timeScale then
+				chassis.AssemblyLinearVelocity = velocity / timeScale
+				timeScale = nil
+			end
+		else
+			airTime += dt
+			if not timeScale and airTime >= AIR_TIME_DELAY and slowdown < 1 then
+				timeScale = slowdown
+				chassis.AssemblyLinearVelocity = velocity * slowdown
+			end
+		end
+		local flightScale = timeScale or 1
+
 		-- Своя гравитация: на трассе тянет в поверхность, в воздухе плавно возвращается вниз.
 		local targetGravity = if onGround then -normalSum.Unit else -WORLD_UP
 		gravityDir = gravityDir:Lerp(targetGravity, math.min(1, dt * VehicleTuning.GravityBlend)).Unit
-		local force = (gravityDir + WORLD_UP) * mass * gravity -- + WORLD_UP гасит обычную гравитацию мира
+		local force = (gravityDir * flightScale * flightScale + WORLD_UP) * mass * gravity -- + WORLD_UP гасит гравитацию мира
 
 		local throttle = if enabled then input.throttle else 0
 		local steer = if enabled then input.steer else 0
+		local pitchInput = if enabled then input.pitch else 0
 		local boosting = now < boostUntil
 		local angular = chassis.AssemblyAngularVelocity
 		local inertia = mass * (size.X * size.X + size.Z * size.Z) / 12
@@ -208,16 +253,27 @@ function VehicleController.attach(car: Model, input: Input.Input, carsFolder: In
 
 			local desiredYaw =
 				VehicleMath.desiredYawRate(forwardSpeed, steer, VehicleTuning.TurnRate, VehicleTuning.FullSteerSpeed)
+			if guideRoad and VehicleTuning.RoadGuide > 0 then
+				-- Петля идет винтом и уводит дорогу вбок: без доворота машина ехала бы в забор.
+				local roadForward = -(guideRoad :: BasePart).CFrame.ZVector
+				local flat = roadForward - up * roadForward:Dot(up)
+				if flat.Magnitude > 0.1 then
+					flat = flat.Unit
+					local misalignment = math.atan2(up:Dot(look:Cross(flat)), look:Dot(flat))
+					desiredYaw += misalignment * VehicleTuning.RoadGuide
+				end
+			end
 			local yawRate = angular:Dot(up)
 			torque.Torque = up * (desiredYaw - yawRate) * VehicleTuning.YawResponse * inertia
 		else
-			if boosting then
-				force += look * VehicleTuning.BoostAcceleration * 0.5 * mass
+			if boosting and forwardSpeed < VehicleTuning.BoostSpeed * flightScale then
+				-- Предел буста действует и в воздухе: без него прыжок разгонял машину до 350 и перелетал трассу.
+				force += look * VehicleTuning.BoostAcceleration * 0.5 * mass * flightScale * flightScale
 			end
 			-- В воздухе: газ/тормоз наклоняют нос, руль дает крен. Без кнопок машина выравнивается.
-			local desired = right * (-throttle * VehicleTuning.AirPitchRate)
+			local desired = right * (-pitchInput * VehicleTuning.AirPitchRate)
 				+ look * (steer * VehicleTuning.AirRollRate)
-			if throttle == 0 and steer == 0 then
+			if pitchInput == 0 and steer == 0 then
 				desired += up:Cross(WORLD_UP) * VehicleTuning.AirLeveling
 			end
 			-- Вращение вокруг «вверх» в воздухе не трогаем, гасим только наклон и крен.
@@ -230,14 +286,14 @@ function VehicleController.attach(car: Model, input: Input.Input, carsFolder: In
 
 		-- Упал с трассы или застрял: возвращаем на последний чекпоинт.
 		if chassis.Position.Y < killHeight then
-			VehicleController.respawn()
+			VehicleController.respawn("fall")
 			return
 		end
 		if enabled and velocity.Magnitude < VehicleTuning.StuckSpeed then
 			stuckFor += dt
 			if stuckFor >= VehicleTuning.StuckSeconds then
 				stuckFor = 0
-				VehicleController.respawn()
+				VehicleController.respawn("stuck")
 			end
 		else
 			stuckFor = 0

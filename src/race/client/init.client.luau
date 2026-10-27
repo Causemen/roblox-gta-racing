@@ -6,10 +6,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
+local AutoPilot = require(script.AutoPilot)
 local CameraController = require(script.CameraController)
+local Effects = require(script.Effects)
 local Hud = require(script.Hud)
 local Input = require(script.Input)
 local RaceRules = require(ReplicatedStorage.Shared.RaceRules)
+local TouchControls = require(script.TouchControls)
+local TuningPanel = require(script.TuningPanel)
 local VehicleController = require(script.VehicleController)
 
 local localPlayer = Players.LocalPlayer :: Player
@@ -18,11 +22,17 @@ local track = Workspace:WaitForChild("Track") :: Model
 local carsFolder = Workspace:WaitForChild("Cars")
 
 local input = Input.start()
+TouchControls.start()
 Hud.create()
 CameraController.start()
+Effects.start(input)
 CameraController.setOverview(track:GetAttribute("CameraCFrame") :: CFrame?)
 VehicleController.setKillHeight((track:GetAttribute("KillHeight") :: number?) or -math.huge)
 input.onRespawn.Event:Connect(VehicleController.respawn)
+if RunService:IsStudio() then
+	TuningPanel.start()
+	AutoPilot.start(input, track)
+end
 
 local state = "Lobby"
 local raceStartedAt = 0
@@ -54,6 +64,7 @@ local function onStateChanged()
 	end
 	if state == "Racing" then
 		raceStartedAt = Workspace:GetServerTimeNow()
+		AutoPilot.onRaceStart()
 		flash("GO!", 1)
 	end
 	VehicleController.setEnabled(state == "Racing" and finishTime == nil)
@@ -104,11 +115,13 @@ raceEvent.OnClientEvent:Connect(function(message: { [string]: any })
 		if typeof(spawn) == "CFrame" then
 			VehicleController.setRespawn(spawn)
 		end
+		AutoPilot.onCheckpoint(passed, message.total)
 		if passed < message.total then
 			flash(`Чекпоинт {passed}`, 0.8)
 		end
 	elseif message.kind == "Finished" then
 		finishTime = message.time
+		AutoPilot.onFinished(message.place)
 		VehicleController.setEnabled(false)
 		flash(`Финиш! {message.place} место · {RaceRules.formatTime(message.time)}`, 6)
 	elseif message.kind == "Standings" then
@@ -121,6 +134,7 @@ raceEvent.OnClientEvent:Connect(function(message: { [string]: any })
 			table.insert(lines, `{row.place}. {row.name}   {time}`)
 		end
 		Hud.showResults(lines)
+		AutoPilot.onResults()
 	end
 end)
 
