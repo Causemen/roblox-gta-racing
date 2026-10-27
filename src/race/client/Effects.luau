@@ -21,13 +21,14 @@ local SOUND_IDS = {
 
 -- Фоновая музыка заезда: список rbxassetid://..., играют по кругу. Пусто = музыки нет.
 local MUSIC_IDS: { string } = {
-	"rbxassetid://100221387261601",
-	"rbxassetid://75764445212230",
-	"rbxassetid://137189594264459",
-	"rbxassetid://72653741821355",
-	"rbxassetid://80059228606274",
-	"rbxassetid://88378288910365",
-	"rbxassetid://102892380593258",
+	"rbxassetid://129127997655557", -- Phonk Nightmare Race
+	"rbxassetid://120477473525627", -- NEON BAILOUT RAGE
+	"rbxassetid://105100211445392", -- Psycho Phonk Slay
+	"rbxassetid://123636731441495", -- Mad Phonk Energy
+	"rbxassetid://137691412494086", -- Drift Storm Car Bass Boosted
+	"rbxassetid://140580823167015", -- Voltstorm Overload Phonk Energy
+	"rbxassetid://85735197482652", -- DRIFT NIGHT PHONK Car Motion Edit
+	"rbxassetid://124698937788234", -- Drum And Bass Jungle Dimensional Drift
 }
 local MUSIC_VOLUME = 0.35
 
